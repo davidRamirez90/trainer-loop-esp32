@@ -1,0 +1,31 @@
+# Development defaults. Production secure-boot/flash-encryption settings are
+# intentionally not enabled here; those are irreversible release decisions.
+CONFIG_COMPILER_CXX_EXCEPTIONS=y
+CONFIG_COMPILER_CXX_RTTI=y
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# The attached board reports embedded 8 MB AP_3v3 PSRAM. Waveshare's V1
+# ESP-IDF examples use octal PSRAM at 80 MHz; keep this explicit so heap and
+# graphics budgets are measured against the actual board configuration.
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+
+CONFIG_ESP_SYSTEM_PANIC_PRINT_REBOOT=y
+CONFIG_ESP_TASK_WDT_EN=y
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=10
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+CONFIG_FREERTOS_HZ=1000
+
+# BLE-only NimBLE central for trainer and heart-rate peripherals.
+CONFIG_BT_ENABLED=y
+CONFIG_BT_BLUEDROID_ENABLED=n
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_NIMBLE_MAX_CONNECTIONS=2
+
+# Keep enough built-in font sizes for the fixed portrait ride layout. The
+# target/actual values intentionally use a larger face than the status rows.
+CONFIG_LV_FONT_MONTSERRAT_24=y
+CONFIG_LV_FONT_MONTSERRAT_48=y

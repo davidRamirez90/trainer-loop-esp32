@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <title>TrainerLoop setup</title>
+  <style>
+    :root { color-scheme: dark; font: 16px system-ui, sans-serif; }
+    body { max-width: 42rem; margin: 2rem auto; padding: 0 1rem; background: #090a0a; color: #f4f5f4; }
+    main { display: grid; gap: 1rem; }
+    label { display: grid; gap: .35rem; }
+    input, button { min-height: 3.25rem; border: 1px solid #4c5a57; border-radius: .5rem; padding: 0 .8rem; font: inherit; }
+    input { background: #151918; color: inherit; }
+    button { background: #18a894; color: #05100e; font-weight: 700; cursor: pointer; }
+    .note { color: #b8c2bf; }
+    #status { min-height: 1.5rem; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Set up TrainerLoop</h1>
+  <p class="note">This page is served by the device over its temporary protected Wi-Fi network. It never stores or echoes your API key.</p>
+  <p class="note">Development firmware stores credentials in unencrypted device NVS. Setup HTTP is protected by the temporary Wi-Fi password, not end-to-end TLS.</p>
+  <form id="setup-form" autocomplete="off">
+    <label>Home Wi-Fi SSID <input name="wifi_ssid" maxlength="32" required></label>
+    <label>Home Wi-Fi password <input name="wifi_password" type="password" maxlength="64" autocomplete="off"></label>
+    <label>Intervals.icu athlete ID <input name="athlete_id" maxlength="64" required></label>
+    <label>Intervals.icu API key <input name="api_key" type="password" maxlength="192" autocomplete="off" required></label>
+    <label>FTP (W) <input name="ftp_watts" type="number" min="50" max="600" required></label>
+    <label>Rider weight (kg) <input name="rider_kg" type="number" min="30" max="200" step="0.1" required></label>
+    <label>Bike weight (kg) <input name="bike_kg" type="number" min="5" max="15" step="0.1" value="8" required></label>
+    <label>Crr <input name="crr" type="number" min="0.002" max="0.010" step="0.001" value="0.005" required></label>
+    <label>CdA (m²) <input name="cda" type="number" min="0.15" max="0.60" step="0.01" value="0.32" required></label>
+    <label>Timezone <input name="timezone" maxlength="48" value="Europe/Berlin" required></label>
+    <label>Timezone POSIX rule <input name="timezone_rule" maxlength="96" value="CET-1CEST,M3.5.0/2,M10.5.0/3" required></label>
+    <button type="submit">Validate and save</button>
+  </form>
+  <p id="status" role="status"></p>
+</main>
+<script>
+  window.TRAINER_LOOP_CSRF = '__TRAINER_LOOP_CSRF__';
+  const form = document.querySelector('#setup-form');
+  const status = document.querySelector('#status');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    status.textContent = 'Validating Wi-Fi, time, and Intervals.icu…';
+    const values = Object.fromEntries(new FormData(form));
+    try {
+      const response = await fetch('/api/setup/commit', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-Token': window.TRAINER_LOOP_CSRF || ''},
+        cache: 'no-store',
+        body: JSON.stringify(values)
+      });
+      const result = await response.json();
+      status.textContent = result.message || (response.ok ? 'Setup complete.' : 'Setup incomplete.');
+    } catch (_) {
+      status.textContent = 'The device disconnected while switching Wi-Fi. Check the device screen for the recovery URL.';
+    }
+  });
+</script>
+</body>
+</html>

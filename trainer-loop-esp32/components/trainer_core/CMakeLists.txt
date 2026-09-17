@@ -1,0 +1,28 @@
+idf_component_register(
+  SRCS
+    "src/ble_protocol.cpp"
+    "src/ble_manager.cpp"
+    "src/clock.cpp"
+    "src/fit_encoder.cpp"
+    "src/fit_store.cpp"
+    "src/erg_policy.cpp"
+    "src/hash.cpp"
+    "src/history.cpp"
+    "src/intervals.cpp"
+    "src/journal.cpp"
+    "src/physics.cpp"
+    "src/recorder.cpp"
+    "src/settings.cpp"
+    "src/summary.cpp"
+    "src/sync.cpp"
+    "src/setup.cpp"
+    "src/state_machine.cpp"
+    "src/telemetry.cpp"
+    "src/time_service.cpp"
+    "src/upload_queue.cpp"
+    "src/ui.cpp"
+    "src/workout.cpp"
+    "src/workout_cache.cpp"
+  INCLUDE_DIRS "include"
+  REQUIRES esp_timer littlefs
+)
