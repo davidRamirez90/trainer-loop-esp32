@@ -10,23 +10,38 @@ security, or service validation.
 - [x] `make test` and explicit Debug CMake/build/CTest: 2/2 pass, including
   official Garmin FIT Python SDK 21.214.0 validation of four session fixtures.
 - [x] ESP-IDF build with runtime settings/retry and expiry shutdown code:
-  app `0x21b810`, app partition free `0x1e47f0` (47%); bootloader `0x5160`.
+  app `0x21c5d0`, app partition free `0x1e3a30` (47%); bootloader `0x5160`
+  with 36% free.
 - [x] Deterministic parser, clock, safety/replay, offline eligibility, upload
-  failure/reboot, torn chunk, short-write, cache preservation and FIT checks.
+  failure/reboot, Retry-After rebasing, finalized-session enumeration,
+  guarded-format policy, torn chunk, short-write, cache preservation and FIT
+  checks.
 - [x] Source review: bounded settings/requests, write-only API credentials,
   TLS certificate bundle and disabled HTTP redirects; explicit development
   plaintext NVS label. No irreversible security settings changed.
 - [ ] Physically verify the new settings screen, persistence, pause/stop UI,
   AP expiry shutdown and security controls on the board after an independently
   authorized application update. This phase did not flash or open serial.
-- [ ] Before release, replace/guard development LittleFS format-on-mount-failure:
-  it remains `true` from verified bring-up and can erase a damaged volume.
-  Host fault tests do not prove survival of a mount failure under this policy.
+- [ ] Resolve firmware replacement compatibility before any update: re-read the
+  live partition sector, preserve the old image under an approved backup plan,
+  and explicitly decide whether NVS/storage data must survive. The recorded
+  live `factory`/SPIFFS layout differs from the current `app0`/LittleFS project
+  table, so application-only flashing is not currently presumed safe.
+- [x] Guard the development LittleFS format-on-mount-failure path: formatting is
+  now enabled only after the labeled partition is verified entirely erased;
+  existing bytes force a non-destructive recovery-preserving mount failure.
+  Host policy tests cover the decision; physical damaged-volume durability and
+  recovery remain release gates.
 
 See [Laptop validation and home sequence](LAPTOP_VALIDATION.md) for exact
 coverage and limitations. The user's prior evidence confirms Wi-Fi/SNTP,
 athlete validation HTTP 200 and settings surviving reboot; it does not close
 trainer/HR, upload, encryption or mounted touch acceptance gates.
+
+User-reported hardware follow-up (not laptop evidence): the Garmin HR monitor
+appears in scanning and can connect, but no HR values are visible on the device
+screen; the trainer does not appear in scanning. Pairing, telemetry display,
+and trainer discovery remain open Phase 4/5 gates.
 
 ## Earlier bring-up build evidence — 2026-09-17 (before this continuation)
 
@@ -95,9 +110,10 @@ trainer/HR, upload, encryption or mounted touch acceptance gates.
 - [x] Verify the FT3168 frame path on the attached unit with live press/release
   transitions and in-bounds coordinates at the center and multiple touch
   corners/edges. Repeat the complete four-corner usability test before release.
-- [x] Mount the selected internal LittleFS with first-boot format-on-failure;
-  serial bring-up verified that an unformatted partition was initialized and
-  journal/cache directory creation succeeded.
+- [x] Mount the selected internal LittleFS with a guarded first-boot format
+  only for an entirely erased partition; serial bring-up verified that an
+  unformatted partition was initialized and journal/cache directory creation
+  succeeded. Existing-volume mount failure remains non-destructive.
 - [ ] Verify dual-manifest recovery after interrupted writes and measure
   recovery/write durability on the audited V1 storage configuration.
 - [x] Confirm the current partition sizes and application image fit within the

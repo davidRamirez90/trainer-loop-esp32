@@ -25,6 +25,9 @@ struct JournalManifest {
   std::int64_t start_utc_ms = 0;
   bool time_trusted = false;
   std::uint8_t time_quality = 0U;
+  // Immutable upload destination captured at ride start. Empty is accepted
+  // only for legacy manifests written before this field existed.
+  std::string destination_athlete_id;
 };
 
 struct RecoveredSession {
@@ -50,6 +53,7 @@ class SessionJournal {
   bool has_current_session() const;
   Result<RecoveredSession> recover_current() const;
   Result<RecoveredSession> read_session(const std::string& uuid) const;
+  std::vector<std::string> list_sessions() const;
   const std::string& root_directory() const { return root_directory_; }
 
  private:

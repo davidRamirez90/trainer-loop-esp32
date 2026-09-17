@@ -151,7 +151,7 @@ std::string upload_state_name(UploadState state) {
 
 UploadQueue::UploadQueue(std::string database_path) : database_path_(std::move(database_path)) {}
 
-Status UploadQueue::load() {
+Status UploadQueue::load(std::uint64_t monotonic_now_ms) {
   entries_.clear();
   std::ifstream input(database_path_);
   if (!input) return Status::ok();  // First boot has an empty queue.
@@ -162,7 +162,7 @@ Status UploadQueue::load() {
       return Status::failure(ErrorCode::kBounds, "upload queue record is too large");
     }
     const auto fields = split(line);
-    if (fields.size() != 12U || entries_.size() >= kMaxQueueEntries) {
+    if ((fields.size() != 12U && fields.size() != 13U) || entries_.size() >= kMaxQueueEntries) {
       return Status::failure(ErrorCode::kStorage, "upload queue record is invalid");
     }
     std::vector<std::string> decoded;
@@ -177,7 +177,8 @@ Status UploadQueue::load() {
     const auto next = unsigned_number(fields[8]);
     const auto status = signed_number(fields[9]);
     const auto uploaded = unsigned_number(fields[11]);
-    if (!attempts || !next || !status || !uploaded || *attempts > UINT32_MAX || *status < 0 || *status > 999) {
+    const auto retry_delay = fields.size() == 13U ? unsigned_number(fields[12]) : std::optional<std::uint64_t>(0U);
+    if (!attempts || !next || !status || !uploaded || !retry_delay || *attempts > UINT32_MAX || *status < 0 || *status > 999) {
       return Status::failure(ErrorCode::kStorage, "upload queue number is invalid");
     }
     const auto state = parse_state(fields[10]);
@@ -197,11 +198,17 @@ Status UploadQueue::load() {
     entry.state = *state;
     entry.attempts = static_cast<std::uint32_t>(*attempts);
     entry.next_attempt_ms = *next;
+    entry.retry_delay_ms = *retry_delay;
     entry.last_http_status = *status;
     entry.uploaded_at_ms = *uploaded;
     if (entry.state == UploadState::kUploading) {
       entry.state = UploadState::kPending;
-      entry.next_attempt_ms = 0U; // monotonic deadlines belong to the previous boot
+      entry.next_attempt_ms = 0U;
+      entry.retry_delay_ms = 0U;
+    } else if (entry.state == UploadState::kRetryWait) {
+      // The persisted absolute value belongs to the previous monotonic epoch.
+      // Reconstruct the deadline from the durable relative wait instead.
+      entry.next_attempt_ms = saturating_delay(monotonic_now_ms, entry.retry_delay_ms);
     }
     entries_.push_back(std::move(entry));
   }
@@ -215,6 +222,7 @@ Status UploadQueue::retry_failed(std::uint64_t now_ms) {
         (entry.state == UploadState::kRetryWait && entry.last_error_class != "rate_limited")) {
       entry.state = UploadState::kPending;
       entry.next_attempt_ms = now_ms;
+      entry.retry_delay_ms = 0U;
     }
   }
   const Status saved = persist();
@@ -233,7 +241,8 @@ Status UploadQueue::persist() const {
            << encode_field(entry.last_error_class) << '|'
            << encode_field(entry.remote_activity_id) << '|'
            << entry.attempts << '|' << entry.next_attempt_ms << '|'
-           << entry.last_http_status << '|' << upload_state_name(entry.state) << '|' << entry.uploaded_at_ms << '\n';
+           << entry.last_http_status << '|' << upload_state_name(entry.state) << '|' << entry.uploaded_at_ms << '|'
+           << entry.retry_delay_ms << '\n';
   }
   if (!output) return Status::failure(ErrorCode::kStorage, "cannot write upload queue");
   if (!write_atomic(database_path_, output.str())) {
@@ -278,6 +287,7 @@ Status UploadQueue::mark_fit_ready(const std::string& session_uuid) {
   const UploadEntry previous = *entry;
   entry->state = UploadState::kPending;
   entry->next_attempt_ms = 0U;
+  entry->retry_delay_ms = 0U;
   const Status persisted = persist();
   if (!persisted) *entry = previous;
   return persisted;
@@ -292,6 +302,7 @@ Status UploadQueue::mark_uploading(const std::string& session_uuid, std::uint64_
   if (entry->next_attempt_ms > now_ms) return Status::failure(ErrorCode::kConflict, "upload retry is not due");
   const UploadEntry previous = *entry;
   entry->state = UploadState::kUploading;
+  entry->retry_delay_ms = 0U;
   const Status persisted = persist();
   if (!persisted) *entry = previous;
   return persisted;
@@ -308,6 +319,8 @@ Status UploadQueue::apply_result(const std::string& session_uuid, const UploadHt
   const UploadEntry previous = *entry;
   entry->last_http_status = result.status;
   entry->remote_activity_id = result.remote_activity_id;
+  entry->next_attempt_ms = 0U;
+  entry->retry_delay_ms = 0U;
   switch (result.classification) {
     case UploadHttpClass::kAccepted:
     case UploadHttpClass::kDuplicate:
@@ -325,12 +338,14 @@ Status UploadQueue::apply_result(const std::string& session_uuid, const UploadHt
       entry->next_attempt_ms = result.retry_after_s == 0U
                                    ? retry_deadline(*entry, now_ms)
                                    : saturating_delay(now_ms, static_cast<std::uint64_t>(result.retry_after_s) * 1000ULL);
+      entry->retry_delay_ms = entry->next_attempt_ms >= now_ms ? entry->next_attempt_ms - now_ms : 0U;
       if (entry->attempts < UINT32_MAX) ++entry->attempts;
       break;
     case UploadHttpClass::kTransient:
       entry->state = UploadState::kRetryWait;
       entry->last_error_class = "transient";
       entry->next_attempt_ms = retry_deadline(*entry, now_ms);
+      entry->retry_delay_ms = entry->next_attempt_ms >= now_ms ? entry->next_attempt_ms - now_ms : 0U;
       if (entry->attempts < UINT32_MAX) ++entry->attempts;
       break;
     case UploadHttpClass::kPermanent:
@@ -354,6 +369,7 @@ Status UploadQueue::reassign_athlete(const std::string& session_uuid, const std:
   entry->attempts = 0U;
   entry->last_error_class.clear();
   entry->next_attempt_ms = 0U;
+  entry->retry_delay_ms = 0U;
   const Status persisted = persist();
   if (!persisted) *entry = previous;
   return persisted;

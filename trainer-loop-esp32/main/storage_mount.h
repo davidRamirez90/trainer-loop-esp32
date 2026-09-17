@@ -7,6 +7,10 @@
 
 namespace trainer_loop {
 
+constexpr bool storage_mount_format_allowed(bool partition_is_erased) noexcept {
+  return partition_is_erased;
+}
+
 struct StorageStatus {
   bool mounted = false;
   std::uint64_t total_bytes = 0U;

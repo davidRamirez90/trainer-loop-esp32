@@ -60,5 +60,28 @@ void ui_settings_contracts() {
   assert(queue.mark_uploading("retry", 60001));
   UploadQueue reboot_upload(root + "/queue"); assert(reboot_upload.load());
   assert(reboot_upload.next_due(0, false)); // new boot has a new monotonic epoch
+
+  // Retry-After is a relative service deadline, not a stale monotonic value
+  // from the previous boot. Rebooting must preserve the immutable FIT identity
+  // and destination athlete while rebasing the wait into the new epoch.
+  UploadQueue reboot_wait_source(root + "/retry-wait-reboot");
+  UploadEntry retry_entry;
+  retry_entry.session_uuid = "retry-wait-session";
+  retry_entry.fit_path = "retry-wait-session.fit";
+  retry_entry.fit_sha256 = std::string(64, 'd');
+  retry_entry.athlete_id = "destination-athlete";
+  retry_entry.filename = "retry-wait-session.fit";
+  assert(reboot_wait_source.enqueue(retry_entry));
+  assert(reboot_wait_source.mark_fit_ready(retry_entry.session_uuid));
+  assert(reboot_wait_source.mark_uploading(retry_entry.session_uuid, 1000));
+  assert(reboot_wait_source.apply_result(
+      retry_entry.session_uuid, classify_upload_response(429, "", 60), 1000));
+  UploadQueue reboot_wait(root + "/retry-wait-reboot");
+  assert(reboot_wait.load(500));
+  assert(reboot_wait.entries().front().fit_sha256 == retry_entry.fit_sha256);
+  assert(reboot_wait.entries().front().athlete_id == retry_entry.athlete_id);
+  assert(!reboot_wait.next_due(500, false));
+  assert(reboot_wait.next_due(60500, false));
+  assert(reboot_wait.mark_uploading(retry_entry.session_uuid, 60500));
   std::filesystem::remove_all(root);
 }

@@ -52,6 +52,14 @@ ota_0,    app,  ota_0,   0x530000, 6M
 storage,  data, spiffs,  0xb30000, 4884K
 ```
 
+This table was captured before the later authorized bring-up work and no
+post-bring-up partition-sector read is recorded. It differs from the current
+project [`partitions.csv`](../../partitions.csv), which uses `app0`/`app1` at
+`0x20000`/`0x420000` and a LittleFS `storage` partition at `0x820000`.
+Therefore it is not evidence that an application-only update is compatible;
+the live table must be re-read and the data-preservation decision made before
+any firmware write.
+
 The board MAC and optional unique ID were intentionally not recorded in this
 document. The live table is the currently installed firmware's layout; it is
 not evidence that the project's development partition policy has been flashed.
@@ -123,3 +131,13 @@ Captured points included approximately `(186,237)`, `(65,46)`, `(334,427)`,
 and `(48,419)` on the 368×448 panel. The diagnostic logs were removed after
 this capture. The final non-diagnostic image was flashed with SHA verification;
 no full-chip erase, eFuse write, or JTAG halt was performed.
+
+## User-reported BLE follow-up
+
+On 2026-09-17, the user reported that the Garmin HR monitor appears during
+scanning and can be connected, but no HR values are visible on the device
+screen. The trainer does not appear during scanning. This is a partial,
+user-observed integration result; it does not establish HRS telemetry, UI
+rendering, trainer discovery, FTMS subscriptions, or safe ERG control. Those
+Phase 4/5 gates remain open and the next hardware test should isolate trainer
+discovery before attempting a ride.

@@ -46,6 +46,7 @@ class FirmwareApp {
                                    std::vector<SessionEvent> events);
   Status publish_recovered_session_artifacts(RecoveredSession recovered);
   Status finalize_session_artifacts();
+  void reconcile_finalized_sessions();
   void process_pending_upload(std::uint64_t now_ms);
   void reconcile_pending_fits();
 

@@ -43,6 +43,7 @@ Status SessionCoordinator::enter_ready() {
     // stale "clock already started" error.
     clocks_ = SessionClocks{};
     session_uuid_.clear();
+    destination_athlete_id_.clear();
     events_.clear();
     buffered_samples_.clear();
   }
@@ -99,12 +100,16 @@ Status SessionCoordinator::select_workout(Workout workout, ProfileSettings profi
 }
 
 Status SessionCoordinator::start(std::uint64_t now_ms, StartTimeAnchor anchor,
-                                 const SensorSnapshot& sensors, bool storage_reserved) {
+                                 const SensorSnapshot& sensors, bool storage_reserved,
+                                 std::string destination_athlete_id) {
   if (state_ != RideState::kPreview) return Status::failure(ErrorCode::kConflict, "workout is not in preview");
   if (!anchor.trusted || !plausible_utc_ms(anchor.utc_ms)) {
     return Status::failure(ErrorCode::kTimeUntrusted, "trusted plausible time is required to start");
   }
   if (!storage_reserved) return Status::failure(ErrorCode::kStorage, "recording reservation is unavailable");
+  if (destination_athlete_id.size() > kMaxAthleteIdBytes) {
+    return Status::failure(ErrorCode::kBounds, "destination athlete ID is too long");
+  }
   if (journal_ == nullptr) return Status::failure(ErrorCode::kStorage, "durable session journal is unavailable");
   if (!trainer_capabilities_.has_value()) {
     return Status::failure(ErrorCode::kUnsupported, "trainer power capabilities are unavailable");
@@ -145,11 +150,13 @@ Status SessionCoordinator::start(std::uint64_t now_ms, StartTimeAnchor anchor,
   manifest.start_utc_ms = anchor.utc_ms;
   manifest.time_trusted = anchor.trusted;
   manifest.time_quality = anchor.quality;
+  manifest.destination_athlete_id = destination_athlete_id;
   status = journal_->start(manifest);
   if (!status) {
     (void)trainer_->stop();
     return status;
   }
+  destination_athlete_id_ = std::move(destination_athlete_id);
   status = clocks_.start(now_ms, anchor);
   if (!status) {
     (void)trainer_->stop();
@@ -402,6 +409,7 @@ Status SessionCoordinator::finish(std::uint64_t now_ms, bool interrupted) {
     manifest.start_utc_ms = anchor_.utc_ms;
     manifest.time_trusted = anchor_.trusted;
     manifest.time_quality = anchor_.quality;
+    manifest.destination_athlete_id = destination_athlete_id_;
     manifest.wall_ms = clocks.wall_ms;
     manifest.active_ms = clocks.active_ms;
     manifest.plan_ms = clocks.plan_ms;

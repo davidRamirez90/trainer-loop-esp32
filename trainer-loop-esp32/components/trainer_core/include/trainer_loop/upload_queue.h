@@ -28,7 +28,10 @@ struct UploadEntry {
   std::string filename;
   UploadState state = UploadState::kFitPending;
   std::uint32_t attempts = 0U;
+  // next_attempt_ms is monotonic and valid only in the current boot epoch.
+  // retry_delay_ms is the durable relative wait used to rebase RETRY_WAIT.
   std::uint64_t next_attempt_ms = 0U;
+  std::uint64_t retry_delay_ms = 0U;
   int last_http_status = 0;
   std::string last_error_class;
   std::string remote_activity_id;
@@ -39,7 +42,7 @@ class UploadQueue {
  public:
   explicit UploadQueue(std::string database_path);
 
-  Status load();
+  Status load(std::uint64_t monotonic_now_ms = 0U);
   Status persist() const;
   Status retry_failed(std::uint64_t now_ms);
   Status enqueue(UploadEntry entry);

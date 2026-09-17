@@ -68,10 +68,7 @@ Result<SyncMetadata> IntervalsSync::sync_today(const TimeService& time) {
     remote.ftp_watts = static_cast<int>(*ftp);
   }
   if (const auto weight = object_number(root, "icu_weight")) remote.weight_kg = *weight;
-  ProfileSettings updated = apply_remote_profile(settings_->current().profile, remote);
-  if (updated.ftp_watts != settings_->current().profile.ftp_watts || updated.rider_kg != settings_->current().profile.rider_kg) {
-    (void)settings_->update_profile(updated, settings_->current().generation);
-  }
+  const ProfileSettings synced_profile = apply_remote_profile(settings_->current().profile, remote);
   cJSON_Delete(root);
 
   const auto events_response = http_->execute(build_today_events_request(secrets.athlete_id, secrets.api_key, metadata.local_date));
@@ -109,6 +106,11 @@ Result<SyncMetadata> IntervalsSync::sync_today(const TimeService& time) {
   const auto supported = supported_today_events(remote_events, metadata.local_date);
   if (!supported) return Result<SyncMetadata>::failure(supported.error->code, supported.error->message);
   if (supported.value->empty()) {
+    if (synced_profile.ftp_watts != settings_->current().profile.ftp_watts ||
+        synced_profile.rider_kg != settings_->current().profile.rider_kg) {
+      const Status updated = settings_->update_profile(synced_profile, settings_->current().generation);
+      if (!updated) return Result<SyncMetadata>::failure(updated.error->code, updated.error->message);
+    }
     metadata.state = SyncState::kEmpty;
     return Result<SyncMetadata>::success(metadata);
   }
@@ -138,7 +140,7 @@ Result<SyncMetadata> IntervalsSync::sync_today(const TimeService& time) {
     cached.source_zwo = zwo_response.value->body;
     cached.workout = *parsed.value;
     cached.name = cached.workout.name = cached.name;
-    cached.ftp_used_for_preview = settings_->current().profile.ftp_watts;
+    cached.ftp_used_for_preview = synced_profile.ftp_watts;
     cached.downloaded_utc_ms = time.snapshot().utc_ms;
     cached.validated_utc_ms = time.snapshot().utc_ms;
     pending.push_back(std::move(cached));
@@ -146,6 +148,11 @@ Result<SyncMetadata> IntervalsSync::sync_today(const TimeService& time) {
   for (const auto& cached : pending) {
     const Status saved = cache_->save(cached);
     if (!saved) return Result<SyncMetadata>::failure(saved.error->code, saved.error->message);
+  }
+  if (synced_profile.ftp_watts != settings_->current().profile.ftp_watts ||
+      synced_profile.rider_kg != settings_->current().profile.rider_kg) {
+    const Status updated = settings_->update_profile(synced_profile, settings_->current().generation);
+    if (!updated) return Result<SyncMetadata>::failure(updated.error->code, updated.error->message);
   }
   metadata.state = SyncState::kSuccess;
   metadata.last_success_ms = static_cast<std::uint64_t>(time.snapshot().utc_ms);

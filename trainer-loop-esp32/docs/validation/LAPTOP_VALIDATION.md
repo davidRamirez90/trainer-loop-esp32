@@ -27,8 +27,18 @@ entries; the first contains the deterministic C++ cases, the second generates
 and decodes four FIT fixtures. The external decoder is pinned to
 `garmin-fit-sdk==21.214.0`; use `-DFIT_PYTHON=/path/to/python` for another
 installation. Test executables use assertions: run the prescribed Debug build.
-All commands above passed. Firmware app size: `0x21b810`; free app partition:
-`0x1e47f0` (47%). Bootloader: `0x5160` (36% free). Firmware was only built.
+All commands above passed. Firmware app size: `0x21c5d0`; free app partition:
+`0x1e3a30` (47%). Bootloader: `0x5160` (36% free). Firmware was only built.
+
+Firmware replacement is currently blocked on partition compatibility. The
+earlier live-table evidence records `factory`/`ota_0` application offsets and
+SPIFFS storage that differ from the current `partitions.csv` `app0`/`app1`
+offsets and LittleFS storage. That evidence predates later bring-up and is
+not a fresh read. Do not run `idf.py flash` or `idf.py app-flash` until a new
+read-only partition-sector check, an old-image backup plan, and an explicit
+NVS/storage retention decision are complete. A table/app write without a
+storage initialization decision may leave old bytes in the new LittleFS
+region, which the non-destructive mount guard correctly refuses to format.
 
 ## Coverage and boundaries
 
@@ -37,8 +47,8 @@ All commands above passed. Firmware app size: `0x21b810`; free app partition:
 | Workout | Invalid/oversized/non-finite duration/power, source/repeat limits; ramp, step and IntervalsT boundaries | Real account dialects and all workout variants |
 | Clocks/safety | Pause freezes active/plan; wall continues; monotonic regression; UTC advances; ride UTC anchor survives correction; start guards; failed resume; stale/subscription/disconnect pause; no reconnect/reboot auto-resume | Trainer's physical resistance release/hold and latency |
 | Replay | Reusable fake controller drives production connection generations, parsers and command gate; ACK/NACK/late/timeout; reconnect/stale notifications; coordinator pause/stop traces; 8,192 FTMS flag combinations and truncated prefixes; HRS cases | NimBLE radio/CCCD interoperability, exact Hub/strap captures, measured ERG |
-| Upload | 401/403 blocked; 408/429/5xx retry; timeout/DNS/TLS represented by the runtime's status-zero transport outcome; Retry-After preserved; ordinary/ambiguous 422 rejected; exact duplicate fixture; lost response/reboot retains identity; no sending while offline/riding | Actual DNS/TLS stacks, authorized service upload, real duplicate schema and exactly-once remote behavior |
-| Storage | ENOSPC/short writes at chunk/manifest/FIT/cache/queue boundaries; every cut position in second chunk retains first; corrupt newest manifest falls back; both corrupt preserve directory and fail; orphan FIT temporary file; failed upload result survives boot; idempotent FIT/queue retries; failed finishing retries without another trainer stop | LittleFS power-cut durability, directory rename durability, fragmentation, TF removal, reserve/endurance measurements |
+| Upload | 401/403 blocked; 408/429/5xx retry; timeout/DNS/TLS represented by the runtime's status-zero transport outcome; Retry-After preserved; FIT identity and journal-captured destination athlete preserved across reboot; ordinary/ambiguous 422 rejected; exact duplicate fixture; lost response/reboot retains identity; no sending while offline/riding | Actual DNS/TLS stacks, authorized service upload, real duplicate schema and exactly-once remote behavior |
+| Storage | ENOSPC/short writes at chunk/manifest/FIT/cache/queue boundaries; every cut position in second chunk retains first; corrupt newest manifest falls back; both corrupt preserve directory and fail; finalized-session enumeration; guarded initial-format policy; orphan FIT temporary file; failed upload result survives boot; idempotent FIT/queue retries; failed finishing retries without another trainer stop | LittleFS power-cut durability, directory rename durability, fragmented/full volumes, TF removal, reserve/endurance measurements |
 | UI/profile | Portable validation, active-session lock, persistence failure leaves memory unchanged; restored five-value profile and local overrides; ESP LVGL/runtime compilation | Screen layout, touch accuracy, queue behavior and timing on the physical display |
 | Security | Host expiry/close checks; Host/Origin/CSRF/rate-limit existing contracts; bounded numeric/string inputs; source-level secret flow and TLS checks; expiry timer compiles | Physical unlock/re-entry, actual AP expiry, platform logs/crashes, encrypted-at-rest release procedure |
 
@@ -83,14 +93,17 @@ No production identity has been assigned or claimed.
   crash dumps to UART/flash are disabled. Setup page/settings identify plaintext
   development storage. Platform Wi-Fi/TLS/NimBLE logging and crash paths still
   require a physical secret-leak review; application log review alone is not proof.
-- LittleFS `format_if_mount_failed = true` is preserved from verified bring-up.
-  This is a release blocker for damaged-volume preservation: introduce and test
-  a non-destructive mount/recovery policy before release. Do not interpret host
-  recovery passes as permission to format a device containing unsynced rides.
+- LittleFS formatting is now guarded by a full erased-partition check. The
+  runtime passes `format_if_mount_failed` only for a demonstrably empty labeled
+  partition; any existing bytes make mount failure non-destructive and return a
+  recovery-preserving error. Host policy tests cover the decision, but do not
+  prove LittleFS power-cut/directory durability. Do not format a device
+  containing unsynced rides.
 - The exact plain-text duplicate fixture is a conservative development contract,
   not a verified Intervals response schema. Unrecognized 422 responses remain
-  errors. Rebooted retry-wait entries still require real-time/backoff policy
-  validation; this phase specifically fixes in-flight upload reboot deadlines.
+  errors. Rebooted retry-wait entries now rebase the persisted relative wait,
+  including Retry-After, while preserving FIT identity and destination athlete;
+  live service/backoff policy validation remains open.
 - No eFuses were burned and no irreversible secure-boot, encryption or debug
   lockdown configuration was enabled.
 
@@ -99,15 +112,16 @@ No production identity has been assigned or claimed.
 1. **Do not re-provision.** Bring the existing board, exact Zwift Hub One and
    Garmin strap home. Record their firmware/model identities. Keep a rider able
    to stop pedaling immediately and use low workloads for all initial tests.
-2. The board still runs the previously flashed image. Testing the new UI requires
-   a **separately authorized application update**. Rebuild using the commands
-   above, verify the existing partition table, and use the application-only
-   update procedure for that board. Preserve NVS/LittleFS; do not erase flash,
-   change partitions or security settings. After that separate approval, confirm
-   the USB port with `ls /dev/cu.usbmodem*`, then run
-   `idf.py -p <confirmed-port> app-flash monitor` (substitute the confirmed port).
-   Exit the monitor with Ctrl-]. Do not use `erase-flash`. No flash operation is
-   authorized by this laptop validation record itself.
+2. The board still runs a previously flashed image. Testing the new UI requires
+   a **separately authorized firmware replacement**, but the recorded live
+   partition table is not currently compatible with the project table. First
+   perform only the authorized read-only partition check and preserve the old
+   image according to the approved backup plan. If the mismatch remains, stop
+   and explicitly decide whether NVS/storage data may be discarded before
+   choosing a full replacement procedure; do not assume `app-flash` is safe.
+   Never use `erase-flash`, change security settings, or re-provision as part
+   of this validation record. No flash operation is authorized by this laptop
+   validation record itself.
 3. Boot normally. Confirm settings persist, V1 panel orientation/colors and four
    touch corners, no panic/watchdog, and adequate heap. Do not enter setup merely
    to repeat the previously successful Wi-Fi/SNTP/athlete HTTP-200 validation.
@@ -163,8 +177,9 @@ No production identity has been assigned or claimed.
 - Portable core headers/sources: `clock`, `time_service`, `ui`, `upload_queue`;
   `ble_manager.h`, new `storage_io.h`; `state_machine.cpp`, `intervals.cpp`,
   `fit_encoder.cpp`, `journal.cpp`, `fit_store.cpp`, `workout_cache.cpp`,
-  `settings.cpp`.
-- ESP runtime: `main/firmware_app.h/.cpp`, `lvgl_presenter.cpp`,
+  `settings.cpp`, finalized-session enumeration/reconciliation.
+- ESP runtime: `main/firmware_app.h/.cpp`, `storage_mount.cpp/.h`,
+  `intervals_sync.cpp`, `lvgl_presenter.cpp`,
   `provisioning.h/.cpp`, `web/setup.html`.
 - Documentation: `README.md`, `docs/IMPLEMENTATION_STATUS.md`,
   `docs/validation/RELEASE_CHECKLIST.md`, this evidence/home-test record.

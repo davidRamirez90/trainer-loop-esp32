@@ -27,7 +27,8 @@ namespace {
 
 constexpr char kManifestMagic[] = "TLMF";
 constexpr char kChunkMagic[] = "TLCH";
-constexpr std::uint16_t kJournalVersion = 2U;
+constexpr std::uint16_t kManifestVersion = 3U;
+constexpr std::uint16_t kChunkVersion = 2U;
 constexpr std::size_t kManifestMaxBytes = 4096U;
 constexpr std::size_t kChunkHeaderBytes = 20U;
 constexpr std::size_t kMaxJournalEventBytes = 16U * 1024U;
@@ -195,6 +196,7 @@ Status SessionJournal::write_manifest(const JournalManifest& manifest) const {
   if (!valid_component(manifest.uuid) ||
       (!manifest.workout_id.empty() && !valid_component(manifest.workout_id)) ||
       manifest.workout_name.empty() || manifest.workout_name.size() > kMaxWorkoutNameBytes ||
+      manifest.destination_athlete_id.size() > kMaxAthleteIdBytes ||
       (manifest.complete && manifest.interrupted) ||
       (manifest.time_trusted && !plausible_utc_ms(manifest.start_utc_ms)) ||
       (manifest.sample_count == 0U && manifest.last_committed_sequence != 0U)) {
@@ -202,7 +204,7 @@ Status SessionJournal::write_manifest(const JournalManifest& manifest) const {
   }
   std::vector<std::uint8_t> bytes;
   bytes.insert(bytes.end(), kManifestMagic, kManifestMagic + 4);
-  put_u16(&bytes, kJournalVersion);
+  put_u16(&bytes, kManifestVersion);
   put_u32(&bytes, manifest.generation);
   bytes.push_back(manifest.complete ? 1U : 0U);
   bytes.push_back(manifest.interrupted ? 1U : 0U);
@@ -217,6 +219,7 @@ Status SessionJournal::write_manifest(const JournalManifest& manifest) const {
   put_string(&bytes, manifest.uuid, 96U);
   put_string(&bytes, manifest.workout_id, 96U);
   put_string(&bytes, manifest.workout_name, kMaxWorkoutNameBytes);
+  put_string(&bytes, manifest.destination_athlete_id, kMaxAthleteIdBytes);
   put_u32(&bytes, crc32(bytes));
   const std::string path = current_directory() + "/manifest." + std::to_string(manifest.generation % 2U);
   return write_atomic(path, bytes) ? Status::ok() : Status::failure(ErrorCode::kStorage, "manifest commit failed");
@@ -235,7 +238,7 @@ Result<JournalManifest> SessionJournal::read_manifest_from(const std::string& di
     if (!std::equal(bytes.begin(), bytes.begin() + 4, kManifestMagic)) continue;
     std::size_t offset = 4U;
     const std::uint16_t version = get_u16(bytes, &offset);
-    if (version != kJournalVersion) continue;
+    if (version != 2U && version != kManifestVersion) continue;
     const std::uint32_t generation = get_u32(bytes, &offset);
     const std::uint8_t complete_raw = bytes[offset++];
     const std::uint8_t interrupted_raw = bytes[offset++];
@@ -272,12 +275,14 @@ Result<JournalManifest> SessionJournal::read_manifest_from(const std::string& di
     manifest.active_ms = active_ms;
     manifest.plan_ms = plan_ms;
     if (!read_string(&manifest.uuid) || !read_string(&manifest.workout_id) || !read_string(&manifest.workout_name) ||
+        (version >= kManifestVersion && !read_string(&manifest.destination_athlete_id)) ||
         offset + 4U != bytes.size()) continue;
     const std::uint32_t stored_crc = get_u32(bytes, &offset);
     if (stored_crc != crc32(bytes.data(), bytes.size() - 4U)) continue;
     if (!valid_component(manifest.uuid) ||
         (!manifest.workout_id.empty() && !valid_component(manifest.workout_id)) ||
         manifest.workout_name.empty() || manifest.workout_name.size() > kMaxWorkoutNameBytes ||
+        manifest.destination_athlete_id.size() > kMaxAthleteIdBytes ||
         (manifest.time_trusted && !plausible_utc_ms(manifest.start_utc_ms)) ||
         (sample_count == 0U && last_seq != 0U) || sample_count > kMaxSessionSamples) continue;
     if (!best.value.has_value() || generation > best.value->generation) best = Result<JournalManifest>::success(std::move(manifest));
@@ -327,7 +332,7 @@ Status SessionJournal::append_samples(const std::vector<TelemetrySample>& sample
     }
     std::vector<std::uint8_t> bytes;
     bytes.insert(bytes.end(), kChunkMagic, kChunkMagic + 4);
-    put_u16(&bytes, kJournalVersion);
+    put_u16(&bytes, kChunkVersion);
     put_u32(&bytes, first_sequence);
     put_u16(&bytes, static_cast<std::uint16_t>(count));
     put_u32(&bytes, static_cast<std::uint32_t>(payload.size()));
@@ -434,6 +439,23 @@ Result<RecoveredSession> SessionJournal::read_session(const std::string& uuid) c
   return recover_directory(root_directory_ + "/sessions/" + uuid);
 }
 
+std::vector<std::string> SessionJournal::list_sessions() const {
+  std::vector<std::string> sessions;
+  DIR* handle = ::opendir((root_directory_ + "/sessions").c_str());
+  if (handle == nullptr) return sessions;
+  while (const dirent* entry = ::readdir(handle)) {
+    const std::string uuid(entry->d_name);
+    if (!valid_component(uuid)) continue;
+    struct stat status {};
+    if (::stat((root_directory_ + "/sessions/" + uuid).c_str(), &status) == 0 && S_ISDIR(status.st_mode)) {
+      sessions.push_back(uuid);
+    }
+  }
+  ::closedir(handle);
+  std::sort(sessions.begin(), sessions.end());
+  return sessions;
+}
+
 Result<RecoveredSession> SessionJournal::recover_directory(const std::string& directory) const {
   const auto manifest = read_manifest_from(directory);
   if (!manifest) return Result<RecoveredSession>::failure(ErrorCode::kStorage, "no recoverable session manifest");
@@ -456,7 +478,7 @@ Result<RecoveredSession> SessionJournal::recover_directory(const std::string& di
     const auto& bytes = *bytes_result.value;
     if (!std::equal(bytes.begin(), bytes.begin() + 4, kChunkMagic)) { recovered.ignored_torn_tail = true; break; }
     std::size_t offset = 4U;
-    if (get_u16(bytes, &offset) != kJournalVersion) { recovered.ignored_torn_tail = true; break; }
+    if (get_u16(bytes, &offset) != kChunkVersion) { recovered.ignored_torn_tail = true; break; }
     const std::uint32_t first_sequence = get_u32(bytes, &offset);
     const std::uint16_t count = get_u16(bytes, &offset);
     const std::uint32_t payload_length = get_u32(bytes, &offset);

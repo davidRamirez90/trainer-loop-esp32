@@ -1,15 +1,22 @@
 #include "trainer_loop/storage_io.h"
+#include "../../main/storage_mount.h"
 void storage_contracts() {
   using namespace trainer_loop;
+  // Existing LittleFS content must never authorize formatting after a mount
+  // failure; only a demonstrably erased partition may take the first-boot path.
+  assert(!storage_mount_format_allowed(false));
+  assert(storage_mount_format_allowed(true));
   const auto root = temporary_directory();
   SessionJournal journal(root + "/journal");
   JournalManifest manifest;
   manifest.uuid = "storage"; manifest.workout_name = "Storage fixture";
   manifest.start_utc_ms = 1700000000000LL; manifest.time_trusted = true;
+  manifest.destination_athlete_id = "destination-athlete";
   assert(journal.start(manifest));
   TelemetrySample first; first.sequence = 0; first.wall_ms = 1000; first.active_ms = first.plan_ms = 1000;
   assert(journal.append_samples({first}));
   assert(journal.append_event({SessionEvent::Type::kStart,0,0,0,"start"}));
+  assert(journal.recover_current().value->manifest.destination_athlete_id == "destination-athlete");
   storage_test_write_budget = 10;
   assert(!journal.append_event({SessionEvent::Type::kPause,1000,1000,1000,"pause"}));
   storage_test_write_budget.reset();
@@ -35,6 +42,18 @@ void storage_contracts() {
   assert(fallback && fallback.value->samples.size() == 1);
   std::ofstream(root + "/journal/current/manifest." + std::to_string((newest + 1) % 2), std::ios::trunc) << "torn";
   assert(!journal.recover_current()); assert(journal.has_current_session());
+
+  SessionJournal published_sessions(root + "/published");
+  assert(published_sessions.start(manifest));
+  assert(published_sessions.append_samples({first}));
+  auto published_manifest = manifest;
+  published_manifest.complete = true;
+  published_manifest.sample_count = 1;
+  published_manifest.last_committed_sequence = 0;
+  published_manifest.wall_ms = published_manifest.active_ms = published_manifest.plan_ms = 1000;
+  assert(published_sessions.finalize(published_manifest));
+  const auto session_ids = published_sessions.list_sessions();
+  assert(session_ids.size() == 1 && session_ids.front() == manifest.uuid);
 
   // Cut every byte of a second sample chunk: recover only the first.
   SessionJournal cuts(root + "/cuts"); assert(cuts.start(manifest));
@@ -92,7 +111,7 @@ void storage_contracts() {
   SessionCoordinator ride(&trainer, &finish_journal);
   assert(ride.enter_ready()); assert(ride.set_trainer_capabilities({true,true,true,true,true,0,500,5}));
   assert(ride.select_workout(make_workout(), ProfileSettings{}, false));
-  assert(ride.start(1000, {1700000000000LL,true,3}, fresh_sensors(1000), true));
+  assert(ride.start(1000, {1700000000000LL,true,3}, fresh_sensors(1000), true, "destination-athlete"));
   assert(ride.pause(PauseReason::kUser, 2000));
   storage_test_write_budget = 0;
   assert(!ride.end_and_save(3000));
@@ -100,6 +119,8 @@ void storage_contracts() {
   assert(ride.snapshot().state == RideState::kFinishing);
   assert(ride.end_and_save(4000));
   assert(trainer.stop_count == 1);
+  const auto finished_ride = finish_journal.read_session(ride.session_uuid());
+  assert(finished_ride && finished_ride.value->manifest.destination_athlete_id == "destination-athlete");
   assert(ride.enter_ready());
   assert(ride.selected_workout() == nullptr);
   assert(ride.snapshot().clocks.wall_ms == 0);

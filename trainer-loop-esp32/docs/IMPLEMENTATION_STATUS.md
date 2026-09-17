@@ -9,11 +9,11 @@ explicit.
 |---|---|---|
 | 0. Investigation/design | Spec and interface concepts retained as the source of truth | Complete before this implementation; no earlier test results were re-labelled |
 | 1. Preservation/evidence | USB inventory, V1 pin/driver audit record, and an explicitly authorized read-only chip/flash/PSRAM/security/partition audit; no flash writes | Chip/flash/PSRAM/security/partition evidence is recorded; rear-label photo, TF-card/free-space, battery/RTC/PMU behavior, and full physical display/touch acceptance remain open |
-| 2. V1 platform foundation | ESP-IDF project shell, partition policy, native V1 TCA9554 sequencing, SH8601 QSPI panel setup, FT3168 probe/read adapter, BOOT/touch GPIO setup, read-only PCF85063 calendar/validity decoder, LVGL 9.2.2 snapshot presenter with touch command queue, monotonic clock, self-healing LittleFS development mount, paired NVS generations, journal/recovery core, bounded logging contract | ESP-IDF 5.5.4 target build and native CMake/CTest pass; authorized serial bring-up reaches LittleFS mount, journal/cache initialization, SH8601 panel creation, LVGL readiness, BLE initialization, setup AP startup, and FT3168 frame input. Display colors/orientation, full-corner repeat, BOOT/PWR behavior, RTC backup validity (oscillator-stop flag observed), SD detection, and measured heap/power/durability remain open gates |
+| 2. V1 platform foundation | ESP-IDF project shell, partition policy, native V1 TCA9554 sequencing, SH8601 QSPI panel setup, FT3168 probe/read adapter, BOOT/touch GPIO setup, read-only PCF85063 calendar/validity decoder, LVGL 9.2.2 snapshot presenter with touch command queue, monotonic clock, guarded LittleFS initial-format/recovery policy, paired NVS generations, journal/recovery core, bounded logging contract | ESP-IDF 5.5.4 target build and native CMake/CTest pass; authorized serial bring-up reaches LittleFS mount, journal/cache initialization, SH8601 panel creation, LVGL readiness, BLE initialization, setup AP startup, and FT3168 frame input. Existing-volume mount failure preservation is source-guarded and host-policy tested; physical corruption/durability behavior, display colors/orientation, full-corner repeat, BOOT/PWR behavior, RTC backup validity (oscillator-stop flag observed), SD detection, and measured heap/power remain open gates |
 | 3. Setup/cache | Bounded settings validation, transactional setup session, local setup HTML, ESP-guarded protected AP/HTTP handlers, embedded setup page, bounded Wi-Fi/SNTP/athlete verification before NVS commit, Intervals request builder/client, boot-time today/profile/ZWO sync, and strict ZWO cache normalization | User-reported prior board evidence: Wi-Fi, trusted SNTP, Intervals athlete HTTP 200 and settings surviving reboot. This laptop phase adds transactional on-device profile editing/retry and bounded AP shutdown code; physical settings/touch/expiry acceptance, secure-at-rest decision, and wider live Intervals calls remain gates |
 | 4. BLE/safe ERG | FTMS/HRS parsers, byte-level commands, power capability negotiation, command generations and failure classification, plus an ESP-IDF NimBLE central with bounded address/type-qualified scan candidates, explicit selection and persisted address/type identities, two-link reconnect generations, FTMS/HRS GATT discovery, feature/range reads, required CCCD subscriptions, bounded notification delivery, and indication-only control acknowledgement | Exact Hub/strap behavior, safety-release measurement, command latency, and 20 reconnect cycles require hardware; the app intentionally does not auto-select or auto-resume |
 | 5. Workout/simulation/recording | Three clocks, step/ramp engine, deterministic terrain, actual-power physics, 1 Hz sample wire format, CRC journal and interrupted-prefix recovery, coordinator safety rules, and an ESP runtime task that filters BLE generations, restores cached Preview, guards Start/Resume, and preserves an interrupted current journal | 60-minute Hub+Garmin ride, power-cut target, resource/endurance measurements require hardware |
-| 6. FIT/history/upload | FIT activity structure with CRC/timer/lap/session/activity, persisted journal UTC anchors, post-ride and recovered-session FIT publication, local summaries, SHA-256 artifact verification, FIT-pending reconciliation, durable retry queue, bounded remote activity IDs, an outside-the-ride upload worker, and a bounded offline recent-history screen | Official Garmin Python FIT SDK 21.214.0 independently validates complete, partial, paused and journal-recovered fixtures. Live upload/dedup/lost-response tests and richer history detail/export remain integration gates |
+| 6. FIT/history/upload | FIT activity structure with CRC/timer/lap/session/activity, persisted journal UTC anchors, post-ride and recovered-session FIT publication, finalized-session publication reconciliation, local summaries, SHA-256 artifact verification, FIT-pending reconciliation, durable retry queue with reboot-safe relative retry waits, bounded remote activity IDs, an outside-the-ride upload worker, and a bounded offline recent-history screen | Official Garmin Python FIT SDK 21.214.0 independently validates complete, partial, paused and journal-recovered fixtures. Host tests cover persisted Retry-After rebasing and finalized-session enumeration; live upload/dedup/lost-response tests and richer history detail/export remain integration gates |
 | 7. Release hardening | Release checklist and explicit unresolved-gate record; native and ESP-IDF build/size evidence captured | 90/120-minute/4-hour soaks, storage/security/time/touch tests, final production partition sizing, and secure-boot/encryption procedure remain open |
 | 8. P1 | Not started by design | Rich controls/library/export/CPS/ramp-test are separate scope; GPX/free-ride/coaching stay deferred |
 
@@ -45,9 +45,17 @@ are prior board observations, not new hardware results from this phase.
   summaries remain invalid; disconnects generate FIT stop events; recovered
   durations derive from durable records; event logs publish atomically;
   ambiguous 422 text cannot become duplicate success; in-flight upload
-  deadlines are reset for the new boot's monotonic epoch; interrupted finishing
-  can retry locally without repeating trainer stop; returning Home clears the
-  old workout and a new ride resets its artifact-publication state.
+  deadlines are reset for the new boot's monotonic epoch; persisted Retry-After
+  and transient waits are rebased from durable relative delays while FIT hash
+  and journal-captured destination athlete remain unchanged; interrupted
+  finishing can retry
+  locally without repeating trainer stop; finalized sessions are reconciled
+  after an interrupted artifact publication; returning Home clears the old
+  workout and a new ride resets its artifact-publication state; remote profile
+  updates are staged until a complete today/ZWO sync succeeds.
+- LittleFS formatting is now permitted only when the labeled partition is
+  proven entirely erased. A mount failure on an existing partition returns a
+  recovery-preserving error and never formats unsynced rides.
 - Host-only short-write/ENOSPC injection covers journal, cache, FIT and queue
   writes. Test controls do not compile into ESP firmware. No Wi-Fi is needed
   for local cache/history/recording; upload eligibility explicitly gates Wi-Fi.
@@ -58,7 +66,13 @@ are prior board observations, not new hardware results from this phase.
   decisions remain release gates.
 
 `make test`, explicit Debug CMake build and CTest pass (2/2, including the
-external SDK validator). `idf.py build` passes: app `0x21b810`, free `0x1e47f0`
-(47%) in the current app partition. No physical acceptance gate is closed by
-these results. Full evidence, limitations, changed-file groups and the exact
-home sequence: [Laptop validation](validation/LAPTOP_VALIDATION.md).
+external SDK validator). The final laptop-only `idf.py build` also passes: app
+`0x21c5d0`, free `0x1e3a30` (47%) in the current app partition; bootloader
+`0x5160` with 36% free. No physical acceptance gate is closed by these results.
+Full evidence, limitations, changed-file groups and the exact home sequence:
+[Laptop validation](validation/LAPTOP_VALIDATION.md).
+
+The user additionally reports that the Garmin HR monitor appears during scan
+and can be connected, but no HR values are visible on the device screen; the
+trainer does not appear during scan. This is an open hardware/UI integration
+finding, not laptop evidence and not a release-gate pass.

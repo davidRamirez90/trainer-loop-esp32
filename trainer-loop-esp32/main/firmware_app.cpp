@@ -391,7 +391,8 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
                                   static_cast<std::uint8_t>(time_snapshot.quality)};
       const StorageCapacity capacity = check_storage_capacity(
           "/storage", session_reservation_bytes());
-      status = coordinator_.start(now_ms, anchor, sensors_, capacity.enough);
+      status = coordinator_.start(now_ms, anchor, sensors_, capacity.enough,
+                                  settings_.current().secrets.athlete_id);
       if (status) artifacts_finalized_ = false;
       break;
     }
@@ -469,7 +470,9 @@ Status FirmwareApp::publish_session_artifacts(const JournalManifest& manifest, c
   upload.session_uuid = manifest.uuid;
   upload.fit_path = artifact.value->path;
   upload.fit_sha256 = artifact.value->sha256;
-  upload.athlete_id = settings_.current().secrets.athlete_id;
+  upload.athlete_id = manifest.destination_athlete_id.empty()
+                          ? settings_.current().secrets.athlete_id
+                          : manifest.destination_athlete_id;
   upload.filename = sanitized_fit_filename(upload.session_uuid);
   const Status queued = upload_queue_.enqueue(upload);
   if (!queued) return queued;
@@ -505,6 +508,30 @@ Status FirmwareApp::finalize_session_artifacts() {
       std::move(recovered.value->samples), std::move(recovered.value->events));
   if (published) artifacts_finalized_ = true;
   return published;
+}
+
+void FirmwareApp::reconcile_finalized_sessions() {
+  if (!history_ready_ || !fit_store_ready_ || !upload_queue_ready_) return;
+  for (const std::string& uuid : journal_.list_sessions()) {
+    const auto history = history_.find(uuid);
+    const auto upload = std::find_if(upload_queue_.entries().begin(), upload_queue_.entries().end(),
+                                      [&](const UploadEntry& entry) { return entry.session_uuid == uuid; });
+    if (history && upload != upload_queue_.entries().end()) continue;
+
+    const auto recovered = journal_.read_session(uuid);
+    if (!recovered) {
+      ESP_LOGW("trainer_app", "finalized session %s could not be read for publication: %s",
+               uuid.c_str(), recovered.error->message.c_str());
+      continue;
+    }
+    const Status published = publish_recovered_session_artifacts(*recovered.value);
+    if (!published) {
+      // Keep the immutable journal session in place. The same reconciliation
+      // path retries it on the next boot or whenever runtime storage recovers.
+      ESP_LOGW("trainer_app", "finalized session %s publication deferred: %s",
+               uuid.c_str(), published.error->message.c_str());
+    }
+  }
 }
 
 void FirmwareApp::reconcile_pending_fits() {
@@ -703,7 +730,9 @@ void FirmwareApp::start() {
   if (!fit_store_status) {
     ESP_LOGW("trainer_app", "FIT artifact store unavailable: %s", fit_store_status.error->message.c_str());
   }
-  const Status upload_queue_status = upload_queue_.load();
+  // Retry deadlines are relative waits on disk and must be rebased into this
+  // boot's monotonic epoch before the worker considers them due.
+  const Status upload_queue_status = upload_queue_.load(monotonic_ms());
   upload_queue_ready_ = static_cast<bool>(upload_queue_status);
   if (!upload_queue_status) {
     ESP_LOGW("trainer_app", "upload queue unavailable: %s", upload_queue_status.error->message.c_str());
@@ -730,6 +759,7 @@ void FirmwareApp::start() {
     ESP_LOGW("trainer_app", "preserved interrupted session with %u valid samples",
              static_cast<unsigned>(recovered_sample_count));
   }
+  reconcile_finalized_sessions();
   const Status cache_status = workout_cache_.initialize();
   if (!cache_status) {
     ESP_LOGE("trainer_app", "workout cache unavailable: %s", cache_status.error->message.c_str());

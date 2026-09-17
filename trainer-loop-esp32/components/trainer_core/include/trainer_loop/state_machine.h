@@ -68,7 +68,7 @@ class SessionCoordinator {
   Status set_trainer_capabilities(TrainerCapabilities capabilities);
   Status select_workout(Workout workout, ProfileSettings profile, bool simulation_enabled);
   Status start(std::uint64_t now_ms, StartTimeAnchor anchor, const SensorSnapshot& sensors,
-               bool storage_reserved);
+               bool storage_reserved, std::string destination_athlete_id = {});
   Status tick(std::uint64_t now_ms, const SensorSnapshot& sensors);
   Status pause(PauseReason reason, std::uint64_t now_ms);
   Status resume(std::uint64_t now_ms, const SensorSnapshot& sensors);
@@ -102,6 +102,7 @@ class SessionCoordinator {
   SessionClocks clocks_;
   StartTimeAnchor anchor_;
   std::string session_uuid_;
+  std::string destination_athlete_id_;
   std::uint32_t next_sample_sequence_ = 0U;
   std::uint64_t next_sample_due_ms_ = 0U;
   std::uint32_t ramp_start_active_ms_ = 0U;

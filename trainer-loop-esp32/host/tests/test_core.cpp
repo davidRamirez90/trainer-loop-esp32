@@ -299,7 +299,7 @@ int main() {
   const std::string root = temporary_directory();
   trainer_loop::SessionJournal journal(root + "/journal");
   trainer_loop::JournalManifest journal_manifest{"session-one", "fixture-workout", "Fixture", 0U, 0U, 0U,
-                                                0U, 0U, 0U, false, false, 1700000000000LL, true, 3U};
+                                                0U, 0U, 0U, false, false, 1700000000000LL, true, 3U, ""};
   assert(journal.start(journal_manifest));
   assert(journal.has_current_session());
   trainer_loop::TelemetrySample sample;
@@ -447,7 +447,7 @@ int main() {
 
   trainer_loop::SessionJournal recorder_journal(root + "/recorder-journal");
   trainer_loop::Recorder recorder(&recorder_journal);
-  assert(recorder.start({"recorded", "fixture-workout", "Fixture", 0U, 0U, 0U, 0U, 0U, 0U, false, false}, 0U));
+  assert(recorder.start({"recorded", "fixture-workout", "Fixture", 0U, 0U, 0U, 0U, 0U, 0U, false, false, 0, false, 0U, ""}, 0U));
   for (std::uint32_t i = 0U; i < 5U; ++i) {
     sample.sequence = i;
     sample.wall_ms = i * 1000U;
@@ -458,7 +458,7 @@ int main() {
   assert(recorder_recovered && recorder_recovered.value->samples.size() == 5U);
 
   trainer_loop::SessionJournal torn_journal(root + "/torn-journal");
-  assert(torn_journal.start({"torn", "fixture-workout", "Fixture", 0U, 0U, 0U, 0U, 0U, 0U, false, false}));
+  assert(torn_journal.start({"torn", "fixture-workout", "Fixture", 0U, 0U, 0U, 0U, 0U, 0U, false, false, 0, false, 0U, ""}));
   sample.sequence = 0U;
   assert(torn_journal.append_samples({sample}));
   std::ofstream torn_chunk(root + "/torn-journal/current/chunks/chunk-00000000.bin", std::ios::binary | std::ios::app);
@@ -521,7 +521,7 @@ int main() {
   assert(coordinator.set_trainer_capabilities({true, true, true, true, true, 0, 500, 5}));
   assert(coordinator.select_workout(make_workout(), profile, false));
   auto sensors = fresh_sensors(1000U);
-  assert(coordinator.start(1000U, {1700000000000LL, true, 1U}, sensors, true));
+  assert(coordinator.start(1000U, {1700000000000LL, true, 1U}, sensors, true, "first-athlete"));
   assert(coordinator.snapshot().state == trainer_loop::RideState::kRunning);
   assert(coordinator.tick(1000U, sensors));
   sensors.power_w.timestamp_ms = 5000U;
@@ -534,14 +534,18 @@ int main() {
   assert(coordinator.end_and_save(10000U));
   assert(coordinator.snapshot().state == trainer_loop::RideState::kComplete);
   assert(coordinator.snapshot().complete == false);
+  const auto first_ride = coordinator_journal.read_session(coordinator.session_uuid());
+  assert(first_ride && first_ride.value->manifest.destination_athlete_id == "first-athlete");
   assert(coordinator.enter_ready());
   assert(coordinator.select_workout(make_workout(), profile, false));
   sensors = fresh_sensors(20000U);
-  assert(coordinator.start(20000U, {1700000005000LL, true, 1U}, sensors, true));
+  assert(coordinator.start(20000U, {1700000005000LL, true, 1U}, sensors, true, "second-athlete"));
   assert(coordinator.snapshot().state == trainer_loop::RideState::kRunning);
   assert(coordinator.end_and_save(21000U, true));
   assert(coordinator.snapshot().state == trainer_loop::RideState::kComplete);
   assert(!coordinator.snapshot().complete);
+  const auto second_ride = coordinator_journal.read_session(coordinator.session_uuid());
+  assert(second_ride && second_ride.value->manifest.destination_athlete_id == "second-athlete");
   std::filesystem::remove_all(root);
 
   std::cout << "trainer_core_tests: smoke checks passed\n";
