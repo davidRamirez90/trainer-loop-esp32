@@ -222,3 +222,12 @@ and trainer discovery remain open Phase 4/5 gates.
 P1 richer controls/library/export/CPS/ramp-test work and separately approved
 GPX/free-ride/coaching features remain out of P0. They must not add a trainer
 control path or weaken the safety/recovery guarantees above.
+
+## Read-only maintenance follow-up — 2026-09-17
+
+The authorized no-reset/no-stub ROM connection attempt on `/dev/cu.usbmodem2101`
+failed to synchronize. No fresh flash ID, partition sector or full backup was
+obtained; partition compatibility remains unresolved. No reset fallback or
+device write was performed. Laptop tests passed again (CTest 2/2). See the
+[inspection result and proposed backup plan](../hardware/MAINTENANCE-2026-09-17.md); backup approval and
+the explicit NVS/storage preservation decision remain pending.

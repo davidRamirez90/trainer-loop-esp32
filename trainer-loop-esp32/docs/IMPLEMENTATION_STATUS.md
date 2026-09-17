@@ -76,3 +76,12 @@ The user additionally reports that the Garmin HR monitor appears during scan
 and can be connected, but no HR values are visible on the device screen; the
 trainer does not appear during scan. This is an open hardware/UI integration
 finding, not laptop evidence and not a release-gate pass.
+
+## Read-only maintenance follow-up — 2026-09-17
+
+The authorized no-reset/no-stub ROM connection attempt on `/dev/cu.usbmodem2101`
+failed to synchronize. No fresh flash ID, partition sector or full backup was
+obtained; partition compatibility remains unresolved. No reset fallback or
+device write was performed. Laptop tests passed again (CTest 2/2). See the
+[inspection result and proposed backup plan](hardware/MAINTENANCE-2026-09-17.md); backup approval and
+the explicit NVS/storage preservation decision remain pending.
