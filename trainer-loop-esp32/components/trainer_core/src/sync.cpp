@@ -32,6 +32,19 @@ bool safe_event_id(const std::string& value) {
 
 }  // namespace
 
+const char* sync_state_label(SyncState state) {
+  switch (state) {
+    case SyncState::kNever: return "Not synced";
+    case SyncState::kRunning: return "Syncing";
+    case SyncState::kSuccess: return "Synced";
+    case SyncState::kEmpty: return "No workout today";
+    case SyncState::kOffline: return "Offline";
+    case SyncState::kAuthBlocked: return "Auth blocked";
+    case SyncState::kError: return "Sync failed";
+  }
+  return "Sync failed";
+}
+
 Result<std::vector<RemoteWorkoutEvent>> supported_today_events(
     const std::vector<RemoteWorkoutEvent>& events, const std::string& local_date) {
   if (local_date.empty()) return Result<std::vector<RemoteWorkoutEvent>>::failure(ErrorCode::kInvalidArgument, "local date is empty");

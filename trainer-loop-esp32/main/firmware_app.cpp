@@ -41,6 +41,7 @@ Result<SyncMetadata> FirmwareApp::sync_today_and_persist() {
   const std::uint32_t generation_before = settings_.current().generation;
 #endif
   const auto result = intervals_sync_.sync_today(time_);
+  last_sync_state_ = result ? result.value->state : SyncState::kError;
 #ifdef ESP_PLATFORM
   if (result && settings_.current().generation != generation_before) {
     const Status persisted = nvs_.save(settings_.current());
@@ -313,9 +314,13 @@ UiSnapshot FirmwareApp::make_runtime_ui_snapshot(std::uint64_t now_ms) const {
     ui.local_date = local_date_for_utc(
         time_.snapshot().utc_ms, settings_.current().profile.timezone_rule);
   }
-  ui.cache_status = wifi_.connected()
-                        ? "Wi-Fi synced"
-                        : (cached_workouts_.empty() ? "Wi-Fi offline" : "Offline · cached");
+  if (!wifi_.connected()) {
+    ui.cache_status = cached_workouts_.empty() ? "Wi-Fi offline" : "Offline · cached";
+  } else if (last_sync_state_ == SyncState::kNever || last_sync_state_ == SyncState::kRunning) {
+    ui.cache_status = "Wi-Fi online";
+  } else {
+    ui.cache_status = sync_state_label(last_sync_state_);
+  }
   if (!cached_workouts_.empty()) {
     ui.today_workout_index = std::min(active_cached_workout_index_, cached_workouts_.size() - 1U);
     ui.today_workout_count = cached_workouts_.size();

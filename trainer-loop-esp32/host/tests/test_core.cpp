@@ -462,6 +462,13 @@ int main() {
   assert(filtered_events && filtered_events.value->size() == 2U &&
          filtered_events.value->front().event_id == "a" &&
          filtered_events.value->back().event_id == "virtual");
+  assert(std::string(trainer_loop::sync_state_label(trainer_loop::SyncState::kSuccess)) == "Synced");
+  assert(std::string(trainer_loop::sync_state_label(trainer_loop::SyncState::kEmpty)) == "No workout today");
+  assert(std::string(trainer_loop::sync_state_label(trainer_loop::SyncState::kNever)) == "Not synced");
+  assert(std::string(trainer_loop::sync_state_label(trainer_loop::SyncState::kRunning)) == "Syncing");
+  assert(std::string(trainer_loop::sync_state_label(trainer_loop::SyncState::kOffline)) == "Offline");
+  assert(std::string(trainer_loop::sync_state_label(trainer_loop::SyncState::kAuthBlocked)) == "Auth blocked");
+  assert(std::string(trainer_loop::sync_state_label(trainer_loop::SyncState::kError)) == "Sync failed");
   profile.ftp_local_override = true;
   const auto local_profile = trainer_loop::apply_remote_profile(profile, {{300}, {80.0}});
   assert(local_profile.ftp_watts == 250 && local_profile.rider_kg == 80.0);

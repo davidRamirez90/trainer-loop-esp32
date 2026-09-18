@@ -29,6 +29,8 @@ ProfileSettings apply_remote_profile(ProfileSettings local, const RemoteProfile&
 
 enum class SyncState : std::uint8_t { kNever, kRunning, kSuccess, kEmpty, kOffline, kAuthBlocked, kError };
 
+const char* sync_state_label(SyncState state);
+
 struct SyncMetadata {
   SyncState state = SyncState::kNever;
   std::string local_date;

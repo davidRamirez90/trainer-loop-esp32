@@ -96,6 +96,7 @@ class FirmwareApp {
   bool upload_queue_ready_ = false;
   std::uint64_t next_upload_attempt_ms_ = 0U;
   std::uint64_t next_pairing_scan_attempt_ms_ = 0U;
+  SyncState last_sync_state_ = SyncState::kNever;
   RetryPolicy sync_retry_;
   WifiStation wifi_;
 #ifdef ESP_PLATFORM
