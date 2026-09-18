@@ -573,6 +573,19 @@ int main() {
   assert(progress_ui.interval_remaining_ms == 7500U && progress_ui.workout_progress_percent == 62U);
   assert(progress_ui.workout_profile_count == 2U);
   assert(progress_ui.workout_profile[0] == 66U && progress_ui.workout_profile[1] == 100U);
+  auto long_profile_workout = progress_workout;
+  long_profile_workout.segments.clear();
+  for (std::size_t index = 0U; index < 10U; ++index) {
+    trainer_loop::WorkoutSegment segment;
+    segment.duration_ms = 1000U;
+    segment.id = "segment-" + std::to_string(index);
+    segment.start_low = segment.start_high = segment.end_low = segment.end_high =
+        0.2 + static_cast<double>(index) * 0.05;
+    long_profile_workout.segments.push_back(segment);
+  }
+  const auto long_profile_ui = trainer_loop::make_ui_snapshot(progress_snapshot, &long_profile_workout);
+  assert(long_profile_ui.workout_profile_count == trainer_loop::kUiProfileBars);
+  assert(long_profile_ui.workout_profile.front() > 0U && long_profile_ui.workout_profile.back() == 100U);
   assert(coordinator.end_and_save(10000U));
   assert(coordinator.snapshot().state == trainer_loop::RideState::kComplete);
   assert(coordinator.snapshot().complete == false);
