@@ -325,13 +325,19 @@ setup with no panic/watchdog output.
   cancel the pending scan. Direct touch/readability, trainer/HR selection,
   control acknowledgements, safety, and endurance remain open.
 
-## Pending application checkpoint — pairing row identity layout
+## Latest application-only validation — 2026-09-18
 
 - [x] Pairing candidates now render the role and name on the first line and
   the complete address plus RSSI on the second line, within the existing 52 px
   touch target.
 - [x] Host `make test`, Debug CMake/CTest 2/2, strict Clang `-Werror`, and a
   clean ESP-IDF build pass. The image is `0x222fb0` bytes with `0x1dd050`
-  free (47%) before the final clean-commit rebuild.
-- [ ] Flash only application offset `0x20000`, then visually confirm the
-  two-line rows and their touch feedback on the physical display.
+  free (47%).
+- [x] Clean checkpoint `6244923` was flashed only to application offset
+  `0x20000`; esptool verified SHA-256
+  `57ab51736f74a41f2f642f8fa25ce7266361e61857b89c51f4d1c2811af183a5`.
+  Boot evidence identified app `6244923`, the expected project partition table,
+  LittleFS/LVGL readiness, Wi-Fi recovery, three Intervals HTTP 200 responses,
+  BLE/GATT setup, and no panic/watchdog output.
+- [ ] Visually confirm the two-line pairing rows and touch feedback on the
+  physical display; direct pairing, control safety, and endurance remain open.

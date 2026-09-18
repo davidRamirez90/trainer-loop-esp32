@@ -271,3 +271,12 @@ first, followed by the complete address and RSSI. This keeps the selectable
 identity visible when several devices advertise similar names and avoids the
 previous last-two-byte, clipped single-line presentation. The change is
 render-only and does not alter address/type selection or connection policy.
+
+Checkpoint `6244923` was rebuilt as a clean `0x222fb0`-byte image with
+`0x1dd050` bytes free (47%) and SHA-256
+`57ab51736f74a41f2f642f8fa25ce7266361e61857b89c51f4d1c2811af183a5`.
+It was flashed only to application offset `0x20000`. The bounded monitor
+identified app version `6244923`, the project partition table, LittleFS/LVGL
+readiness, automatic Wi-Fi recovery, three Intervals HTTP 200 responses,
+BLE/GATT setup, and no panic/watchdog output. The two-line pairing layout still
+needs direct physical readability and touch acceptance.

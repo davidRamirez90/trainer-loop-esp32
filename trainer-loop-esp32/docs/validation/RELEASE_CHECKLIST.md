@@ -423,11 +423,19 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [ ] Supervised physical Devices-scan, touch/readability, explicit pairing,
   control acknowledgement, pause/stop safety, and endurance gates remain open.
 
-## Pending application checkpoint — pairing row identity layout
+## Latest application-only validation — 2026-09-18
 
 - [x] Pairing candidates now show role/name on line one and the complete
   address plus RSSI on line two, without changing explicit address/type
   selection or BLE policy.
-- [x] Host, strict Clang, ASan/UBSan, and ESP-IDF validation pass; the pending
-  application image is `0x222fb0` bytes with 47% free.
-- [ ] Perform the application-only flash and physical readability/touch check.
+- [x] Host, strict Clang, ASan/UBSan, and ESP-IDF validation pass; the
+  application image is `0x222fb0` bytes with `0x1dd050` free (47%).
+- [x] Checkpoint `6244923` was flashed only to application offset `0x20000`
+  after the final Git checkpoint; esptool verified SHA-256
+  `57ab51736f74a41f2f642f8fa25ce7266361e61857b89c51f4d1c2811af183a5`.
+  Boot evidence confirms app `6244923`, the expected partition table,
+  LittleFS/LVGL readiness, Wi-Fi recovery, three Intervals HTTP 200 responses,
+  BLE/GATT setup, and no panic/watchdog output.
+- [ ] Perform the physical readability/touch check for the two-line pairing
+  rows, then continue explicit pairing, control acknowledgement, pause/stop
+  safety, and endurance gates.
