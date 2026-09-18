@@ -232,6 +232,23 @@ UiSnapshot make_ui_snapshot(const CoordinatorSnapshot& coordinator, const Workou
   return snapshot;
 }
 
+UiSnapshot make_stop_confirmation_snapshot(UiSnapshot snapshot) {
+  if (snapshot.screen != UiScreen::kActive && snapshot.screen != UiScreen::kPaused) {
+    return snapshot;
+  }
+  snapshot.screen = UiScreen::kStopConfirmation;
+  snapshot.pause_available = false;
+  snapshot.resume_available = false;
+  snapshot.end_save_available = true;
+  snapshot.start_available = false;
+  snapshot.settings_available = false;
+  snapshot.retry_available = false;
+  snapshot.devices_available = false;
+  snapshot.history_available = false;
+  snapshot.next_workout_available = false;
+  return snapshot;
+}
+
 const char* ui_screen_name(UiScreen screen) {
   switch (screen) {
     case UiScreen::kSetup: return "Setup";

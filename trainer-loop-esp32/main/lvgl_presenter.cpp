@@ -755,6 +755,22 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     lv_label_set_text(runtime_->objects.safety,
                       snapshot.safety_message.empty() ? "Trainer pause confirmed" : snapshot.safety_message.c_str());
   }
+  if (snapshot.screen == UiScreen::kStopConfirmation) {
+    char duration[16];
+    format_duration(duration, sizeof(duration), snapshot.elapsed_wall_ms);
+    lv_label_set_text(runtime_->objects.status, "END WORKOUT?");
+    lv_label_set_text(runtime_->objects.workout, "Save this ride locally?");
+    lv_label_set_text(runtime_->objects.target_caption, "DURATION");
+    lv_label_set_text(runtime_->objects.target_value, duration);
+    lv_label_set_text(runtime_->objects.actual_caption, "STATE");
+    lv_label_set_text(runtime_->objects.actual_value, "PAUSED");
+    lv_label_set_text(runtime_->objects.sensors, "END & SAVE creates a ride");
+    lv_label_set_text(runtime_->objects.timing, "");
+    lv_label_set_text(runtime_->objects.terrain, "Resume remains available after Cancel");
+    lv_label_set_text(runtime_->objects.safety,
+                      snapshot.safety_message.empty() ? "Choose END & SAVE or CANCEL"
+                                                       : snapshot.safety_message.c_str());
+  }
   lv_obj_set_width(runtime_->objects.action, snapshot.screen == UiScreen::kHome ? 168 : 344);
 
   for (std::size_t index = 0U; index < kPairingRows; ++index) {
@@ -954,6 +970,8 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
                    ? UiCommandType::kBack
                    : UiCommandType::kOpenDevices,
                !snapshot.busy);
+  } else if (snapshot.screen == UiScreen::kStopConfirmation) {
+    set_action(runtime_, "END & SAVE", UiCommandType::kEndAndSave, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kActive && snapshot.pause_available) {
     set_action(runtime_, "PAUSE", UiCommandType::kPause, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kPaused && snapshot.resume_available) {
@@ -975,7 +993,13 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
   } else {
     set_action(runtime_, "BACK", UiCommandType::kBack, false);
   }
-  if (snapshot.screen == UiScreen::kPairing) {
+  if (snapshot.screen == UiScreen::kStopConfirmation) {
+    lv_obj_set_width(runtime_->objects.action, 168);
+    lv_obj_remove_flag(runtime_->objects.history_button, LV_OBJ_FLAG_HIDDEN);
+    runtime_->history_context.command = UiCommandType::kBack;
+    lv_label_set_text(runtime_->objects.history_button_label, "CANCEL");
+    lv_obj_set_state(runtime_->objects.history_button, LV_STATE_DISABLED, snapshot.busy);
+  } else if (snapshot.screen == UiScreen::kPairing) {
     lv_obj_set_width(runtime_->objects.action, 168);
     lv_obj_remove_flag(runtime_->objects.history_button, LV_OBJ_FLAG_HIDDEN);
     runtime_->history_context.command = UiCommandType::kBack;
@@ -985,7 +1009,7 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     lv_obj_set_width(runtime_->objects.action, 168);
     lv_obj_remove_flag(runtime_->objects.history_button, LV_OBJ_FLAG_HIDDEN);
     runtime_->history_context.command = snapshot.screen == UiScreen::kPaused
-        ? UiCommandType::kEndAndSave : UiCommandType::kRetryUploads;
+        ? UiCommandType::kOpenStopConfirmation : UiCommandType::kRetryUploads;
     lv_label_set_text(runtime_->objects.history_button_label,
                       snapshot.screen == UiScreen::kPaused ? "END & SAVE" : "RETRY UPLOAD");
     lv_obj_set_state(runtime_->objects.history_button, LV_STATE_DISABLED, snapshot.busy);

@@ -414,6 +414,9 @@ UiSnapshot FirmwareApp::make_runtime_ui_snapshot(std::uint64_t now_ms) const {
       ui.fault = "Saved ride details are unavailable";
     }
   }
+  if (stop_confirmation_active_) {
+    ui = make_stop_confirmation_snapshot(std::move(ui));
+  }
   if (ui.screen == UiScreen::kPreview) {
     ui.start_available = time_.trusted() && capabilities_published_ &&
                          connected_with_fresh_power(sensors_, now_ms) &&
@@ -477,7 +480,8 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
   }
   if (session_is_active(ride_state) &&
       command.type != UiCommandType::kPause && command.type != UiCommandType::kResume &&
-      command.type != UiCommandType::kEndAndSave && command.type != UiCommandType::kBack) {
+      command.type != UiCommandType::kEndAndSave && command.type != UiCommandType::kOpenStopConfirmation &&
+      command.type != UiCommandType::kBack) {
     ui_message_ = "Ride active: pause, resume, end, or go back";
     return;
   }
@@ -553,6 +557,17 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       }
       break;
     }
+    case UiCommandType::kOpenStopConfirmation:
+      if (ride_state == RideState::kRunning) {
+        status = coordinator_.pause(PauseReason::kUser, now_ms);
+      } else if (ride_state != RideState::kPaused) {
+        status = Status::failure(ErrorCode::kConflict, "there is no paused ride to end");
+      }
+      if (status) {
+        stop_confirmation_active_ = true;
+        ui_message_ = "Choose END & SAVE or CANCEL";
+      }
+      break;
     case UiCommandType::kOpenDevices:
       history_active_ = false;
       history_detail_active_ = false;
@@ -635,12 +650,22 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
         ui_message_ = "Workout already saved";
         break;
       }
+      if (!stop_confirmation_active_) {
+        status = Status::failure(ErrorCode::kConflict, "confirm END & SAVE before finishing");
+        break;
+      }
       ui_busy_ = true;
       ui_message_ = "Saving ride...";
       present_runtime_ui(now_ms);
       status = coordinator_.end_and_save(now_ms);
+      stop_confirmation_active_ = false;
       break;
     case UiCommandType::kBack:
+      if (stop_confirmation_active_) {
+        stop_confirmation_active_ = false;
+        ui_message_ = "Ride paused";
+        break;
+      }
       if (settings_active_) { settings_active_ = false; ui_message_.clear(); break; }
       if (pairing_active_) {
         status = ble_.stop_scan();
@@ -671,6 +696,7 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
         capabilities_published_ = false;
         history_detail_active_ = false;
         history_detail_uuid_.clear();
+        stop_confirmation_active_ = false;
       }
       break;
     default:

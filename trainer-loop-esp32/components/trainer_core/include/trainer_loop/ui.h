@@ -40,6 +40,7 @@ enum class UiCommandType : std::uint8_t {
   kPause,
   kResume,
   kEndAndSave,
+  kOpenStopConfirmation,
   kOpenDevices,
   kOpenHistory,
   kOpenHistoryEntry,
@@ -144,6 +145,7 @@ TodayWorkoutSelection next_today_workout(TodayWorkoutSelection current);
 std::string ui_date_label(const std::string& local_date);
 const char* compact_link_state_label(const std::string& status);
 UiSnapshot make_ui_snapshot(const CoordinatorSnapshot& coordinator, const Workout* workout = nullptr);
+UiSnapshot make_stop_confirmation_snapshot(UiSnapshot snapshot);
 const char* ui_screen_name(UiScreen screen);
 
 }  // namespace trainer_loop

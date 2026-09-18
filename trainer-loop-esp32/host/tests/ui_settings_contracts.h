@@ -6,6 +6,17 @@ void ui_settings_contracts() {
   assert(std::string(compact_link_state_label("Trainer connected")) == "OK");
   assert(std::string(compact_link_state_label("HR reconnecting")) == "RETRY");
   assert(UiCommandType::kRetry != UiCommandType::kRetryUploads);
+  CoordinatorSnapshot paused_snapshot;
+  paused_snapshot.state = RideState::kPaused;
+  const UiSnapshot stop_confirmation = make_stop_confirmation_snapshot(
+      make_ui_snapshot(paused_snapshot));
+  assert(stop_confirmation.screen == UiScreen::kStopConfirmation);
+  assert(stop_confirmation.end_save_available);
+  assert(!stop_confirmation.resume_available && !stop_confirmation.settings_available);
+  CoordinatorSnapshot ready_snapshot;
+  ready_snapshot.state = RideState::kReady;
+  const UiSnapshot home_snapshot = make_ui_snapshot(ready_snapshot);
+  assert(make_stop_confirmation_snapshot(home_snapshot).screen == home_snapshot.screen);
   std::uint64_t monotonic = 1000;
   TimeService time([&] { return monotonic; });
   assert(time.set_from_sntp(1700000000000LL));
