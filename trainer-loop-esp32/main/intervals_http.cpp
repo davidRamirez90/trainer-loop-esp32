@@ -91,7 +91,6 @@ Result<HttpResponse> IntervalsHttpClient::execute(const HttpRequest& request) co
   // handshake stall without logging request credentials or response bodies.
   esp_log_level_set("esp-tls", ESP_LOG_DEBUG);
   esp_log_level_set("transport_base", ESP_LOG_DEBUG);
-  esp_log_level_set("HTTP_CLIENT", ESP_LOG_DEBUG);
   ESP_LOGI(kTag, "[DEBUG-TLS] before init internal free=%u largest=%u psram free=%u largest=%u",
            static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),

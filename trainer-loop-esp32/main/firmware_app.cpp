@@ -143,7 +143,7 @@ void FirmwareApp::on_provisioning_stopped() {
 namespace {
 
 constexpr std::uint32_t kRuntimePeriodMs = 100U;
-constexpr std::uint32_t kRuntimeStackSize = 8192U;
+constexpr std::uint32_t kRuntimeStackSize = 6144U;
 constexpr UBaseType_t kRuntimePriority = 4U;
 constexpr std::uint64_t kFitReservationBytes = 32U;
 constexpr std::uint64_t kSessionMetadataReserveBytes = 16U * 1024U;
