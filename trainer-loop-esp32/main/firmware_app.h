@@ -17,6 +17,7 @@
 #include "trainer_loop/ui.h"
 #include "time_sync.h"
 #include "wifi_station.h"
+#include "trainer_loop/button_gesture.h"
 
 #include <cstdint>
 #include <optional>
@@ -100,6 +101,7 @@ class FirmwareApp {
   SyncState last_sync_state_ = SyncState::kNever;
   RetryPolicy sync_retry_;
   WifiStation wifi_;
+  ButtonGesture boot_button_;
 #ifdef ESP_PLATFORM
   static void runtime_task_entry(void* argument);
   TaskHandle_t runtime_task_ = nullptr;

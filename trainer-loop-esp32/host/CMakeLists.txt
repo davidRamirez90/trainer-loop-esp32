@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 add_library(trainer_core STATIC
   ${CMAKE_CURRENT_LIST_DIR}/../components/trainer_core/src/ble_protocol.cpp
   ${CMAKE_CURRENT_LIST_DIR}/../components/trainer_core/src/ble_manager.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/../components/trainer_core/src/button_gesture.cpp
   ${CMAKE_CURRENT_LIST_DIR}/../components/trainer_core/src/clock.cpp
   ${CMAKE_CURRENT_LIST_DIR}/../components/trainer_core/src/fit_encoder.cpp
   ${CMAKE_CURRENT_LIST_DIR}/../components/trainer_core/src/fit_store.cpp

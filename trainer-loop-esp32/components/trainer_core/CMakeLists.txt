@@ -2,6 +2,7 @@ idf_component_register(
   SRCS
     "src/ble_protocol.cpp"
     "src/ble_manager.cpp"
+    "src/button_gesture.cpp"
     "src/clock.cpp"
     "src/fit_encoder.cpp"
     "src/fit_store.cpp"

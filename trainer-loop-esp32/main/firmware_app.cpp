@@ -885,6 +885,20 @@ void FirmwareApp::runtime_loop() {
     while (const auto command = display_.pop_command()) {
       process_ui_command(*command, monotonic_ms());
     }
+    const std::uint64_t input_now_ms = monotonic_ms();
+    const ButtonGestureEvent boot_event = boot_button_.update(
+        board_.boot_pressed(), input_now_ms);
+    if (boot_event == ButtonGestureEvent::kShortPress) {
+      const UiCommandType command = coordinator_.snapshot().state == RideState::kRunning
+                                        ? UiCommandType::kPause
+                                        : UiCommandType::kBack;
+      process_ui_command({command, 0U}, input_now_ms);
+    } else if (boot_event == ButtonGestureEvent::kLongPress) {
+      // GPIO0 is also the boot strap. Runtime long presses have no reset,
+      // erase, or provisioning meaning until a separately validated gesture
+      // policy exists; ignoring them keeps a rider-safe boundary.
+      ESP_LOGW("trainer_app", "BOOT long press ignored during runtime");
+    }
     if (pairing_active_ && pairing_scan_pending_ &&
         !ble_.connection_manager().scanning() && now_ms >= next_pairing_scan_attempt_ms_) {
       const Status scan = ble_.start_foreground_scan(now_ms);

@@ -1,5 +1,6 @@
 #include "trainer_loop/ble_protocol.h"
 #include "trainer_loop/ble_manager.h"
+#include "trainer_loop/button_gesture.h"
 #include "trainer_loop/clock.h"
 #include "trainer_loop/erg_policy.h"
 #include "trainer_loop/fit_encoder.h"
@@ -634,6 +635,27 @@ int main() {
   retry_policy.begin();
   retry_policy.finish(151000U, true);
   assert(!retry_policy.pending());
+
+  trainer_loop::ButtonGesture button;
+  assert(button.update(false, 0U) == trainer_loop::ButtonGestureEvent::kNone);
+  assert(button.update(true, 10U) == trainer_loop::ButtonGestureEvent::kNone);
+  assert(button.update(false, 20U) == trainer_loop::ButtonGestureEvent::kNone);
+  assert(button.update(false, 60U) == trainer_loop::ButtonGestureEvent::kNone);
+  assert(button.update(true, 100U) == trainer_loop::ButtonGestureEvent::kNone);
+  assert(button.update(true, 140U) == trainer_loop::ButtonGestureEvent::kNone);
+  assert(button.update(false, 300U) == trainer_loop::ButtonGestureEvent::kNone);
+  assert(button.update(false, 340U) == trainer_loop::ButtonGestureEvent::kShortPress);
+  assert(button.update(false, 350U) == trainer_loop::ButtonGestureEvent::kNone);
+
+  trainer_loop::ButtonGesture long_button;
+  assert(long_button.update(false, 0U) == trainer_loop::ButtonGestureEvent::kNone);
+  assert(long_button.update(true, 100U) == trainer_loop::ButtonGestureEvent::kNone);
+  assert(long_button.update(true, 140U) == trainer_loop::ButtonGestureEvent::kNone);
+  assert(long_button.update(true, 1139U) == trainer_loop::ButtonGestureEvent::kNone);
+  assert(long_button.update(true, 1140U) == trainer_loop::ButtonGestureEvent::kLongPress);
+  assert(long_button.update(true, 1300U) == trainer_loop::ButtonGestureEvent::kNone);
+  assert(long_button.update(false, 1400U) == trainer_loop::ButtonGestureEvent::kNone);
+  assert(long_button.update(false, 1440U) == trainer_loop::ButtonGestureEvent::kNone);
 
   std::filesystem::remove_all(root);
 
