@@ -224,12 +224,23 @@ startup, automatic Wi-Fi recovery, three Intervals HTTP 200 responses and
 BLE/GATT setup with no panic/watchdog output or concurrent-connect deferral in
 the observed window.
 
+Checkpoint `8ac2336` strengthens cache replacement: if a later new-record write
+or prune fails, the prior valid same-date set is restored and partial new
+records are removed. Host storage contracts cover a failure after the first of
+two replacement records. The clean ESP-IDF image is `0x222cd0` bytes with
+`0x1dd330` free (47%); SHA-256 is
+`0475570e50382541d0be13a04a1dad735ea0098e155e842744489b11bdcb2f36`.
+Only application offset `0x20000` was written. The bounded monitor identified
+app version `8ac2336`, the expected partition table, LittleFS/LVGL startup,
+automatic Wi-Fi recovery, three Intervals HTTP 200 responses and BLE/GATT
+setup with no panic/watchdog output.
+
 ## Exact home testing sequence (deferred)
 
 1. **Do not re-provision.** Bring the existing board, exact Zwift Hub One and
    Garmin strap home. Record their firmware/model identities. Keep a rider able
    to stop pedaling immediately and use low workloads for all initial tests.
-2. The board now runs checkpoint `2fba6d3` from an application-only write at
+2. The board now runs checkpoint `8ac2336` from an application-only write at
    `0x20000`; existing NVS and storage were left untouched, and no
    credential-bearing backup was made. Never use `erase-flash`, change security
    settings, or re-provision as part of this validation record.

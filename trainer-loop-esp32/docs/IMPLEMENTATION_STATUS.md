@@ -230,3 +230,16 @@ readiness, automatic Wi-Fi recovery, three Intervals HTTP 200 responses and
 BLE/GATT setup with no panic/watchdog output or concurrent-connect deferral in
 the observed window. Physical selection, touch/readability, control-safety,
 and endurance gates remain open.
+
+Checkpoint `8ac2336` makes daily cache replacement roll back the prior valid
+same-date set if any new record write or pruning step fails. It snapshots files
+that would be overwritten, restores them after a failed replacement, and
+removes partial new records; host coverage now exercises a failure after the
+first of two new records. The clean ESP-IDF image is `0x222cd0` bytes with
+`0x1dd330` free (47%); SHA-256 is
+`0475570e50382541d0be13a04a1dad735ea0098e155e842744489b11bdcb2f36`.
+Only application offset `0x20000` was written. The bounded monitor identified
+app version `8ac2336`, the project partition table, LittleFS/LVGL readiness,
+automatic Wi-Fi recovery, three Intervals HTTP 200 responses and BLE/GATT
+setup with no panic/watchdog output. Physical cache selection, touch/readability,
+control-safety, and endurance gates remain open.

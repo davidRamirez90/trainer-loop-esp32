@@ -385,3 +385,20 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [ ] Physical acceptance remains open for the real-account cache selection,
   scan/reconnect behavior, explicit trainer/HR pairing, control acknowledgements,
   pause/stop safety, touch/readability, and endurance.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Application checkpoint `8ac2336` was built from a clean Git commit and
+  flashed only to application offset `0x20000`; esptool wrote `0x222cd0` bytes
+  and verified SHA-256
+  `0475570e50382541d0be13a04a1dad735ea0098e155e842744489b11bdcb2f36`.
+  No bootloader, partition table, NVS, or LittleFS storage write was made.
+- [x] Cache replacement now restores the prior valid same-date set after a
+  partial multi-record write or prune failure. Host storage contracts cover
+  this failure boundary. Boot evidence identified app version `8ac2336`, the
+  expected partition table, LittleFS/LVGL startup, automatic Wi-Fi recovery,
+  three Intervals HTTP 200 responses and BLE/GATT setup with no
+  panic/watchdog output.
+- [ ] Physical acceptance remains open for real-account cache selection,
+  scan/reconnect behavior, explicit trainer/HR pairing, control acknowledgements,
+  pause/stop safety, touch/readability, and endurance.
