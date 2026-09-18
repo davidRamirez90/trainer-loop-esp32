@@ -301,6 +301,11 @@ int main() {
   assert(clocks.snapshot(13000U).wall_ms == 12000U);
   // A regressing monotonic observation must not rewind any clock.
   assert(clocks.snapshot(11000U).wall_ms == 12000U);
+  assert(clocks.finish(14000U));
+  const auto finished_snapshot = clocks.snapshot(20000U);
+  assert(finished_snapshot.wall_ms == 13000U);
+  assert(finished_snapshot.active_ms == 9000U);
+  assert(!finished_snapshot.running);
 
   const std::string root = temporary_directory();
   trainer_loop::SessionJournal journal(root + "/journal");

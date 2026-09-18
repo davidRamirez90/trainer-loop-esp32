@@ -76,6 +76,10 @@ struct LvglPresenter::Runtime {
     LvglPresenter::Runtime* runtime = nullptr;
     std::size_t index = 0U;
   };
+  struct HistoryButtonContext {
+    LvglPresenter::Runtime* runtime = nullptr;
+    std::size_t index = 0U;
+  };
   struct NavigationButtonContext {
     LvglPresenter::Runtime* runtime = nullptr;
     UiCommandType command = UiCommandType::kBack;
@@ -98,6 +102,7 @@ struct LvglPresenter::Runtime {
   bool stop = false;
   UiCommandQueue* commands = nullptr;
   PairingButtonContext candidate_contexts[kPairingRows]{};
+  HistoryButtonContext history_row_contexts[kHistoryRows]{};
   NavigationButtonContext history_context;
   NavigationButtonContext extra_contexts[4]{};
 };
@@ -162,6 +167,14 @@ void candidate_callback(lv_event_t* event) {
       lv_event_get_user_data(event));
   if (context == nullptr || context->runtime == nullptr || context->runtime->commands == nullptr) return;
   (void)context->runtime->commands->push(UiCommand{UiCommandType::kSelectDevice, context->index});
+}
+
+void history_callback(lv_event_t* event) {
+  if (event == nullptr) return;
+  auto* context = static_cast<LvglPresenter::Runtime::HistoryButtonContext*>(
+      lv_event_get_user_data(event));
+  if (context == nullptr || context->runtime == nullptr || context->runtime->commands == nullptr) return;
+  (void)context->runtime->commands->push(UiCommand{UiCommandType::kOpenHistoryEntry, context->index});
 }
 
 void navigation_callback(lv_event_t* event) {
@@ -349,13 +362,17 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
   }
 
   for (std::size_t index = 0U; index < kHistoryRows; ++index) {
-    runtime->objects.history_rows[index] = lv_obj_create(root);
+    runtime->objects.history_rows[index] = lv_button_create(root);
     if (runtime->objects.history_rows[index] == nullptr) return false;
     lv_obj_set_pos(runtime->objects.history_rows[index], 12, 88 + static_cast<int>(index) * 66);
     lv_obj_set_size(runtime->objects.history_rows[index], 344, 56);
-    style_button(runtime->objects.history_rows[index], lv_color_hex(0x183C32), lv_color_hex(0x183C32),
+    style_button(runtime->objects.history_rows[index], lv_color_hex(0x183C32), lv_color_hex(0x45D6A5),
                  lv_color_hex(0x252A30), 8);
     lv_obj_add_flag(runtime->objects.history_rows[index], LV_OBJ_FLAG_HIDDEN);
+    runtime->history_row_contexts[index].runtime = runtime;
+    runtime->history_row_contexts[index].index = index;
+    lv_obj_add_event_cb(runtime->objects.history_rows[index], history_callback, LV_EVENT_CLICKED,
+                        &runtime->history_row_contexts[index]);
     runtime->objects.history_labels[index] = lv_label_create(runtime->objects.history_rows[index]);
     if (runtime->objects.history_labels[index] == nullptr) return false;
     lv_obj_set_style_text_font(runtime->objects.history_labels[index], &lv_font_montserrat_14, LV_PART_MAIN);
@@ -639,7 +656,10 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
                       snapshot.pairing_scan_active
                           ? "PAIRING  |  SCANNING"
                           : "PAIRING  |  CHOOSE DEVICE");
-    lv_label_set_text(runtime_->objects.workout, "Rows are large targets • address/type confirm identity");
+    char pair_status[192];
+    std::snprintf(pair_status, sizeof(pair_status), "Trainer: %s\nHR: %s",
+                  snapshot.trainer_status.c_str(), snapshot.heart_rate_status.c_str());
+    lv_label_set_text(runtime_->objects.workout, pair_status);
     lv_label_set_text(runtime_->objects.target_caption, "");
     lv_label_set_text(runtime_->objects.actual_caption, "");
     lv_label_set_text(runtime_->objects.target_value, "");
@@ -647,10 +667,12 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     lv_label_set_text(runtime_->objects.sensors, "");
     lv_label_set_text(runtime_->objects.timing, "");
     lv_label_set_text(runtime_->objects.terrain, "");
-    lv_label_set_text(runtime_->objects.safety,
-                      snapshot.pairing_scan_active
-                          ? "Scan ends in 15 seconds • tap STOP SCAN to leave"
-                          : "Scan finished • choose a row or tap BACK");
+    const std::string pairing_message = snapshot.fault.empty()
+                                            ? (snapshot.pairing_scan_active
+                                                   ? "Scan ends in 15 seconds • tap STOP SCAN to leave"
+                                                   : "Scan finished • choose a row or tap SCAN AGAIN")
+                                            : snapshot.fault;
+    lv_label_set_text(runtime_->objects.safety, pairing_message.c_str());
     for (std::size_t index = 0U; index < snapshot.device_candidates.size() && index < kPairingRows; ++index) {
       const DeviceIdentity& candidate = snapshot.device_candidates[index];
       char text[128];
@@ -694,7 +716,73 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
                     entry.upload_status.empty() ? "Saved locally" : entry.upload_status.c_str());
       lv_label_set_text(runtime_->objects.history_labels[index], text);
       lv_obj_remove_flag(runtime_->objects.history_rows[index], LV_OBJ_FLAG_HIDDEN);
+      lv_obj_set_state(runtime_->objects.history_rows[index], LV_STATE_DISABLED, snapshot.busy);
     }
+  }
+  if (snapshot.screen == UiScreen::kHistoryDetail) {
+    char duration[16];
+    char summary_line[96];
+    char terrain_summary[96];
+    const UiHistoryEntry* detail = snapshot.history_detail.has_value() ? &*snapshot.history_detail : nullptr;
+    const SessionSummary* summary = detail == nullptr ? nullptr : &detail->summary;
+    format_duration(duration, sizeof(duration), summary == nullptr ? 0U : summary->wall_ms);
+    std::snprintf(summary_line, sizeof(summary_line), "AVG %d W     HR %d",
+                  summary == nullptr ? 0 : static_cast<int>(summary->average_power_w),
+                  summary == nullptr ? 0 : static_cast<int>(summary->average_heart_rate_bpm));
+    std::snprintf(terrain_summary, sizeof(terrain_summary), "%.1f km     +%.0f m virtual",
+                  summary == nullptr ? 0.0 : static_cast<double>(summary->distance_cm) / 100000.0,
+                  summary == nullptr ? 0.0 : static_cast<double>(summary->ascent_cm) / 100.0);
+    lv_label_set_text(runtime_->objects.status, "RIDE DETAILS");
+    lv_label_set_text(runtime_->objects.workout,
+                      summary == nullptr || summary->workout_name.empty()
+                          ? "Saved workout" : summary->workout_name.c_str());
+    lv_label_set_text(runtime_->objects.target_caption, "DURATION");
+    lv_label_set_text(runtime_->objects.target_value, duration);
+    lv_label_set_text(runtime_->objects.actual_caption, "UPLOAD");
+    lv_label_set_text(runtime_->objects.actual_value, "OK");
+    lv_label_set_text(runtime_->objects.sensors, summary_line);
+    lv_label_set_text(runtime_->objects.timing, "");
+    lv_label_set_text(runtime_->objects.terrain, terrain_summary);
+    lv_label_set_text(runtime_->objects.safety,
+                      detail == nullptr ? snapshot.fault.c_str() : detail->upload_status.c_str());
+  }
+  if (snapshot.screen == UiScreen::kCompletion) {
+    char duration[16];
+    char summary_line[96];
+    char terrain_summary[96];
+    const std::uint32_t wall_ms = snapshot.completion_summary.has_value()
+                                      ? snapshot.completion_summary->wall_ms
+                                      : snapshot.elapsed_wall_ms;
+    format_duration(duration, sizeof(duration), wall_ms);
+    const int average_power = snapshot.completion_summary.has_value()
+                                  ? snapshot.completion_summary->average_power_w
+                                  : 0;
+    const int average_hr = snapshot.completion_summary.has_value()
+                               ? snapshot.completion_summary->average_heart_rate_bpm
+                               : 0;
+    const double distance_km = snapshot.completion_summary.has_value()
+                                   ? static_cast<double>(snapshot.completion_summary->distance_cm) / 100000.0
+                                   : 0.0;
+    const double ascent_m = snapshot.completion_summary.has_value()
+                                ? static_cast<double>(snapshot.completion_summary->ascent_cm) / 100.0
+                                : 0.0;
+    std::snprintf(summary_line, sizeof(summary_line), "AVG %d W     HR %d", average_power, average_hr);
+    std::snprintf(terrain_summary, sizeof(terrain_summary), "%.1f km     +%.0f m virtual",
+                  distance_km, ascent_m);
+    lv_label_set_text(runtime_->objects.status, "RIDE SAVED");
+    lv_label_set_text(runtime_->objects.workout,
+                      snapshot.workout_name.empty() ? "Workout complete" : snapshot.workout_name.c_str());
+    lv_label_set_text(runtime_->objects.target_caption, "DURATION");
+    lv_label_set_text(runtime_->objects.target_value, duration);
+    lv_label_set_text(runtime_->objects.actual_caption, "UPLOAD");
+    lv_label_set_text(runtime_->objects.actual_value, "OK");
+    lv_label_set_text(runtime_->objects.sensors, summary_line);
+    lv_label_set_text(runtime_->objects.timing, "");
+    lv_label_set_text(runtime_->objects.terrain, terrain_summary);
+    const std::string upload_message = snapshot.completion_upload_status.empty()
+                                           ? "Saved on device"
+                                           : snapshot.completion_upload_status;
+    lv_label_set_text(runtime_->objects.safety, upload_message.c_str());
   }
 
   for (auto* button : runtime_->objects.extra) lv_obj_add_flag(button, LV_OBJ_FLAG_HIDDEN);
@@ -737,8 +825,9 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
   } else if (snapshot.screen == UiScreen::kSettings) {
     set_action(runtime_, "BACK / CANCEL", UiCommandType::kBack, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kPairing) {
-    set_action(runtime_, snapshot.pairing_scan_active ? "STOP SCAN" : "BACK",
-               UiCommandType::kBack, !snapshot.busy);
+    set_action(runtime_, snapshot.pairing_scan_active ? "STOP SCAN" : "SCAN AGAIN",
+               snapshot.pairing_scan_active ? UiCommandType::kBack : UiCommandType::kOpenDevices,
+               !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kActive && snapshot.pause_available) {
     set_action(runtime_, "PAUSE", UiCommandType::kPause, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kPaused && snapshot.resume_available) {
@@ -746,6 +835,8 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
   } else if (snapshot.screen == UiScreen::kPreview && snapshot.start_available) {
     set_action(runtime_, "START", UiCommandType::kStart, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kHistory) {
+    set_action(runtime_, "BACK", UiCommandType::kBack, !snapshot.busy);
+  } else if (snapshot.screen == UiScreen::kHistoryDetail) {
     set_action(runtime_, "BACK", UiCommandType::kBack, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kCompletion) {
     set_action(runtime_, "HOME", UiCommandType::kBack, !snapshot.busy);
@@ -758,7 +849,13 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
   } else {
     set_action(runtime_, "BACK", UiCommandType::kBack, false);
   }
-  if (snapshot.screen == UiScreen::kPaused || snapshot.screen == UiScreen::kHistory) {
+  if (snapshot.screen == UiScreen::kPairing) {
+    lv_obj_set_width(runtime_->objects.action, 168);
+    lv_obj_remove_flag(runtime_->objects.history_button, LV_OBJ_FLAG_HIDDEN);
+    runtime_->history_context.command = UiCommandType::kBack;
+    lv_label_set_text(runtime_->objects.history_button_label, "BACK");
+    lv_obj_set_state(runtime_->objects.history_button, LV_STATE_DISABLED, snapshot.busy);
+  } else if (snapshot.screen == UiScreen::kPaused || snapshot.screen == UiScreen::kHistory) {
     lv_obj_set_width(runtime_->objects.action, 168);
     lv_obj_remove_flag(runtime_->objects.history_button, LV_OBJ_FLAG_HIDDEN);
     runtime_->history_context.command = snapshot.screen == UiScreen::kPaused

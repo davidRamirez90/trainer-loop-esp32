@@ -20,6 +20,7 @@
 #include <array>
 #include <cstring>
 #include <limits>
+#include <string>
 
 extern "C" void ble_store_config_init(void);
 
@@ -927,6 +928,12 @@ Status NimbleCentral::start_foreground_scan(std::uint64_t now_ms) {
   if (!initialized_) return Status::failure(ErrorCode::kConflict, "NimBLE is not initialized");
   if (!runtime_->host_ready) return Status::failure(ErrorCode::kConflict, "NimBLE host is not ready");
   if (scan_active_) return Status::failure(ErrorCode::kConflict, "BLE scan is already active");
+  for (const PeripheralRole role : {PeripheralRole::kTrainer, PeripheralRole::kHeartRate}) {
+    if (link_for(runtime_.get(), role).connecting) {
+      return Status::failure(ErrorCode::kConflict,
+                             "BLE scan is waiting for a connection attempt to finish");
+    }
+  }
   const Status manager_status = connections_.scan_started(now_ms);
   if (!manager_status) return manager_status;
   runtime_->candidate_count = 0U;
@@ -947,7 +954,17 @@ Status NimbleCentral::start_foreground_scan(std::uint64_t now_ms) {
                                   &parameters, scan_callback, runtime_.get());
   if (result != 0) {
     (void)connections_.scan_finished();
-    return Status::failure(ErrorCode::kTransport, "BLE scan could not start");
+    ESP_LOGW(kLogTag, "foreground scan could not start (NimBLE error=%d)", result);
+    if (result == BLE_HS_EBUSY) {
+      return Status::failure(ErrorCode::kConflict,
+                             "BLE scan is busy; wait for the current connection to finish");
+    }
+    if (result == BLE_HS_ENOMEM || result == BLE_HS_ENOMEM_EVT) {
+      return Status::failure(ErrorCode::kStorage,
+                             "BLE scan needs more radio memory; retry after reconnect settles");
+    }
+    return Status::failure(ErrorCode::kTransport,
+                           "BLE scan could not start (NimBLE error " + std::to_string(result) + ")");
   }
   scan_active_ = true;
   scan_deadline_ms_ = now_ms > std::numeric_limits<std::uint64_t>::max() - kScanDurationMs

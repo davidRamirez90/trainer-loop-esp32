@@ -78,6 +78,8 @@ class FirmwareApp {
   bool capabilities_published_ = false;
   bool pairing_active_ = false;
   bool history_active_ = false;
+  bool history_detail_active_ = false;
+  std::string history_detail_uuid_;
   bool settings_active_ = false;
   bool ui_busy_ = false;
   ProfileSettings profile_draft_;

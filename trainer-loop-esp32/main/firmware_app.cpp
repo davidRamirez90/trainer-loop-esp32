@@ -289,10 +289,15 @@ UiSnapshot FirmwareApp::make_runtime_ui_snapshot(std::uint64_t now_ms) const {
   ui.busy = ui_busy_;
   ui.wifi_status = wifi_.connected() ? "Wi-Fi connected" : "Wi-Fi offline";
   ui.history_available = history_ready_ && !session_is_active(coordinator_.snapshot().state);
-  if (!session_is_active(coordinator_.snapshot().state)) {
+  if (!ui_message_.empty() && (ui_busy_ || !session_is_active(coordinator_.snapshot().state))) {
     ui.fault = ui_message_;
+  }
+  if (!session_is_active(coordinator_.snapshot().state)) {
     if (coordinator_.selected_workout() == nullptr && ui_message_.empty())
       ui.fault = "No cached workout for today. Connect Wi-Fi and tap Retry.";
+  }
+  if (ui_busy_ && !ui_message_.empty() && ui.safety_message.empty()) {
+    ui.safety_message = ui_message_;
   }
   if (settings_active_) {
     ui.screen = UiScreen::kSettings;
@@ -314,6 +319,19 @@ UiSnapshot FirmwareApp::make_runtime_ui_snapshot(std::uint64_t now_ms) const {
       ui.history_entries.push_back(std::move(entry));
     }
   }
+  if (coordinator_.snapshot().state == RideState::kComplete) {
+    const auto summary = history_.find(coordinator_.session_uuid());
+    if (summary) ui.completion_summary = *summary.value;
+    for (const UploadEntry& upload : upload_queue_.entries()) {
+      if (upload.session_uuid == coordinator_.session_uuid()) {
+        ui.completion_upload_status = upload_state_name(upload.state);
+        break;
+      }
+    }
+    if (ui.completion_upload_status.empty()) {
+      ui.completion_upload_status = artifacts_finalized_ ? "Upload pending" : "Save pending";
+    }
+  }
   if (pairing_active_) {
     ui.screen = UiScreen::kPairing;
     ui.devices_available = false;
@@ -329,6 +347,27 @@ UiSnapshot FirmwareApp::make_runtime_ui_snapshot(std::uint64_t now_ms) const {
     ui.devices_available = false;
     ui.history_available = false;
     ui.device_candidates.clear();
+  }
+  if (history_detail_active_) {
+    ui.screen = UiScreen::kHistoryDetail;
+    ui.devices_available = false;
+    ui.history_available = false;
+    ui.device_candidates.clear();
+    const auto detail = history_.find(history_detail_uuid_);
+    if (detail) {
+      UiHistoryEntry entry;
+      entry.summary = *detail.value;
+      entry.upload_status = "Saved locally";
+      for (const UploadEntry& upload : upload_queue_.entries()) {
+        if (upload.session_uuid == entry.summary.uuid) {
+          entry.upload_status = upload_state_name(upload.state);
+          break;
+        }
+      }
+      ui.history_detail = std::move(entry);
+    } else {
+      ui.fault = "Saved ride details are unavailable";
+    }
   }
   if (ui.screen == UiScreen::kPreview) {
     ui.start_available = time_.trusted() && capabilities_published_ &&
@@ -396,7 +435,7 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
   if (session_is_active(ride_state) &&
       command.type != UiCommandType::kPause && command.type != UiCommandType::kResume &&
       command.type != UiCommandType::kEndAndSave && command.type != UiCommandType::kBack) {
-    ui_message_ = "Settings and network actions locked during a ride";
+    ui_message_ = "Ride active: pause, resume, end, or go back";
     return;
   }
   switch (command.type) {
@@ -439,9 +478,10 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
     }
     case UiCommandType::kOpenDevices:
       history_active_ = false;
+      history_detail_active_ = false;
       pairing_active_ = true;
+      ui_message_.clear();
       status = ble_.start_foreground_scan(now_ms);
-      if (!status) pairing_active_ = false;
       break;
     case UiCommandType::kOpenHistory:
       if (coordinator_.snapshot().state == RideState::kRunning ||
@@ -452,8 +492,21 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       } else {
         pairing_active_ = false;
         history_active_ = true;
+        history_detail_active_ = false;
       }
       break;
+    case UiCommandType::kOpenHistoryEntry: {
+      const std::vector<SessionSummary> entries = history_.recent(4U);
+      if (command.index >= entries.size()) {
+        status = Status::failure(ErrorCode::kInvalidArgument, "saved ride row is no longer available");
+        break;
+      }
+      pairing_active_ = false;
+      history_active_ = false;
+      history_detail_active_ = true;
+      history_detail_uuid_ = entries[command.index].uuid;
+      break;
+    }
     case UiCommandType::kSelectDevice: {
       DeviceIdentity candidate;
       if (!ble_.scan_result(command.index, &candidate)) {
@@ -489,6 +542,13 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       status = coordinator_.resume(now_ms, sensors_);
       break;
     case UiCommandType::kEndAndSave:
+      if (ride_state == RideState::kComplete) {
+        ui_message_ = "Workout already saved";
+        break;
+      }
+      ui_busy_ = true;
+      ui_message_ = "Saving ride...";
+      present_runtime_ui(now_ms);
       status = coordinator_.end_and_save(now_ms);
       break;
     case UiCommandType::kBack:
@@ -496,6 +556,12 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       if (pairing_active_) {
         status = ble_.stop_scan();
         pairing_active_ = false;
+        ui_message_.clear();
+        break;
+      }
+      if (history_detail_active_) {
+        history_detail_active_ = false;
+        history_active_ = true;
         break;
       }
       if (history_active_) {
@@ -510,6 +576,8 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
         status = coordinator_.enter_ready();
         active_cached_workout_.reset();
         capabilities_published_ = false;
+        history_detail_active_ = false;
+        history_detail_uuid_.clear();
       }
       break;
     default:
@@ -518,6 +586,12 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
   if (status && coordinator_.snapshot().state == RideState::kComplete &&
       !artifacts_finalized_) {
     status = finalize_session_artifacts();
+  }
+  if (command.type == UiCommandType::kEndAndSave) {
+    if (status && coordinator_.snapshot().state == RideState::kComplete && artifacts_finalized_) {
+      ui_message_ = "Workout saved";
+    }
+    ui_busy_ = false;
   }
   if (!status) {
     ui_message_ = status.error->message;

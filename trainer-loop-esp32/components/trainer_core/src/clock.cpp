@@ -45,6 +45,7 @@ Status SessionClocks::start(std::uint64_t monotonic_ms, StartTimeAnchor anchor) 
   if (started_) return Status::failure(ErrorCode::kConflict, "session clock already started");
   started_ = true;
   running_ = true;
+  finished_ = false;
   start_monotonic_ms_ = monotonic_ms;
   last_transition_ms_ = monotonic_ms;
   last_observed_ms_ = monotonic_ms;
@@ -66,7 +67,7 @@ Status SessionClocks::pause(std::uint64_t monotonic_ms) {
 }
 
 Status SessionClocks::resume(std::uint64_t monotonic_ms) {
-  if (!started_ || running_) {
+  if (!started_ || running_ || finished_) {
     return Status::failure(ErrorCode::kConflict, "session clock is not paused");
   }
   const std::uint64_t now = bounded_now(monotonic_ms);
@@ -78,21 +79,23 @@ Status SessionClocks::resume(std::uint64_t monotonic_ms) {
 
 Status SessionClocks::finish(std::uint64_t monotonic_ms) {
   if (!started_) return Status::failure(ErrorCode::kConflict, "session clock is not started");
+  if (finished_) return Status::ok();
+  const std::uint64_t now = bounded_now(monotonic_ms);
   if (running_) {
-    const std::uint64_t now = bounded_now(monotonic_ms);
     active_accumulated_ms_ = saturating_add(active_accumulated_ms_, now - last_transition_ms_);
     last_transition_ms_ = now;
     last_observed_ms_ = now;
     running_ = false;
   } else {
-    last_observed_ms_ = bounded_now(monotonic_ms);
+    last_observed_ms_ = now;
   }
+  finished_ = true;
   return Status::ok();
 }
 
 ClockSnapshot SessionClocks::snapshot(std::uint64_t monotonic_ms) const {
   if (!started_) return ClockSnapshot{};
-  const std::uint64_t now = bounded_now(monotonic_ms);
+  const std::uint64_t now = finished_ ? last_observed_ms_ : bounded_now(monotonic_ms);
   const std::uint64_t wall = now - start_monotonic_ms_;
   const std::uint64_t active = saturating_add(active_accumulated_ms_,
                                               running_ ? (now - last_transition_ms_) : 0U);

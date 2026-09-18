@@ -26,6 +26,7 @@ enum class UiScreen : std::uint8_t {
   kCompletion,
   kUploadStatus,
   kHistory,
+  kHistoryDetail,
   kSettings,
   kError,
 };
@@ -38,6 +39,7 @@ enum class UiCommandType : std::uint8_t {
   kEndAndSave,
   kOpenDevices,
   kOpenHistory,
+  kOpenHistoryEntry,
   kOpenSettings,
   kRetry,
   kSelectDevice,
@@ -80,6 +82,7 @@ struct UiSnapshot {
   std::string interval_status;
   std::string fault;
   std::string safety_message;
+  std::string completion_upload_status;
   std::uint32_t elapsed_active_ms = 0U;
   std::uint32_t elapsed_wall_ms = 0U;
   std::uint32_t workout_duration_ms = 0U;
@@ -93,6 +96,8 @@ struct UiSnapshot {
   std::optional<double> relative_ascent_m;
   std::vector<DeviceIdentity> device_candidates;
   std::vector<UiHistoryEntry> history_entries;
+  std::optional<SessionSummary> completion_summary;
+  std::optional<UiHistoryEntry> history_detail;
   ProfileSettings profile;
   std::size_t profile_field = 0U;
   bool settings_available = false;

@@ -155,6 +155,7 @@ const char* ui_screen_name(UiScreen screen) {
     case UiScreen::kCompletion: return "Completion";
     case UiScreen::kUploadStatus: return "Upload Status";
     case UiScreen::kHistory: return "History";
+    case UiScreen::kHistoryDetail: return "History Detail";
     case UiScreen::kSettings: return "Settings";
     case UiScreen::kError: return "Error";
   }

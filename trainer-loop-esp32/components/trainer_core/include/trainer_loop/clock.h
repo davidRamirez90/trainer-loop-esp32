@@ -43,6 +43,7 @@ class SessionClocks {
 
   bool started_ = false;
   bool running_ = false;
+  bool finished_ = false;
   std::uint64_t start_monotonic_ms_ = 0U;
   std::uint64_t last_transition_ms_ = 0U;
   std::uint64_t active_accumulated_ms_ = 0U;
