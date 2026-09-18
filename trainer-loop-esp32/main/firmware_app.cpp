@@ -4,6 +4,7 @@
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "trainer_loop/fit_encoder.h"
 #include "trainer_loop/hash.h"
 #include "trainer_loop/limits.h"
@@ -31,6 +32,14 @@ void configure_timezone(const ProfileSettings& profile) {
   if (profile.timezone_rule.empty()) return;
   (void)::setenv("TZ", profile.timezone_rule.c_str(), 1);
   ::tzset();
+}
+
+void log_runtime_health(const char* stage) {
+  ESP_LOGI("trainer_app", "retry stage=%s stack_free=%u internal_free=%u largest=%u",
+           stage == nullptr ? "unknown" : stage,
+           static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)),
+           static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)));
 }
 
 }  // namespace
@@ -442,14 +451,20 @@ Status FirmwareApp::retry_connection_and_sync(std::uint64_t now_ms) {
   // the progress state before entering them so the touch UI never looks
   // like it reverted to its startup screen or stopped responding.
   present_runtime_ui(now_ms);
+  log_runtime_health("begin");
 
   Status status = Status::ok();
   if (!wifi_.connected()) {
+    log_runtime_health("before_wifi");
     status = wifi_.connect(settings_.current().secrets.wifi_ssid,
                            settings_.current().secrets.wifi_password);
     if (status) status = wifi_.wait_for_connection(10000U);
+    log_runtime_health(status ? "after_wifi" : "wifi_failed");
   }
-  if (status) status = time_sync_.synchronize(&time_, 10000U);
+  if (status) {
+    status = time_sync_.synchronize(&time_, 10000U);
+    log_runtime_health(status ? "after_time" : "time_failed");
+  }
   if (status) {
     const auto sync = sync_today_and_persist();
     if (!sync) status = Status::failure(sync.error->code, sync.error->message);
@@ -460,6 +475,7 @@ Status FirmwareApp::retry_connection_and_sync(std::uint64_t now_ms) {
       ui_message_ = sync_state_label(sync.value->state);
       load_cached_workout_if_available(true);
     }
+    log_runtime_health(status ? "after_sync" : "sync_failed");
   }
   if (upload_queue_ready_) {
     const Status retry = upload_queue_.retry_failed(now_ms);
@@ -467,6 +483,7 @@ Status FirmwareApp::retry_connection_and_sync(std::uint64_t now_ms) {
   }
   next_upload_attempt_ms_ = 0;
   ui_busy_ = false;
+  log_runtime_health(status ? "complete" : "failed");
   return status;
 }
 
@@ -947,6 +964,7 @@ void FirmwareApp::runtime_loop() {
 void FirmwareApp::start() {
 #ifdef ESP_PLATFORM
   bool startup_sync_succeeded = false;
+  ESP_LOGI("trainer_app", "reset reason=%d", static_cast<int>(esp_reset_reason()));
 #endif
   const Status nvs_status = nvs_.initialize();
 #ifdef ESP_PLATFORM
