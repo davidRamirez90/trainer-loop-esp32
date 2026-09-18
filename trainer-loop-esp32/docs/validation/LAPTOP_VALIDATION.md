@@ -181,8 +181,8 @@ remained `796c401`.
 
 Checkpoint `6a6bfea` fixes daily cache replacement. A successful Intervals
 sync now removes stale same-day event records only after the new set is
-written; a successful empty response clears that date, and a failed write
-leaves existing records in place. Host tests cover both paths. The clean
+written; a successful empty response clears that date, and a failed write does
+not prune existing records. Host tests cover both paths. The clean
 ESP-IDF image is `0x221af0` bytes with `0x1de510` free (47%); SHA-256 is
 `f59073d360236474e7bad3e88fab20a3d2753d426579e4818aafc4d1cfa30e6a`.
 At the time of this laptop-only checkpoint, the device still ran `796c401`.

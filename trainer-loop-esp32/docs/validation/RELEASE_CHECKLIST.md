@@ -326,7 +326,7 @@ history upload retry. Existing hardware ride and upload evidence remains
 
 - [x] Checkpoint `6a6bfea` replaces the cached workout set after a successful
   daily sync and clears it for a successful empty response. Failed writes are
-  tested to preserve existing same-day records.
+  tested to avoid pruning existing same-day records.
 - [x] Host tests and clean ESP-IDF build pass; image size is `0x221af0` with
   `0x1de510` free (47%), SHA-256
   `f59073d360236474e7bad3e88fab20a3d2753d426579e4818aafc4d1cfa30e6a`.
