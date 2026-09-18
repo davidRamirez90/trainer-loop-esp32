@@ -140,6 +140,12 @@ device connection, History navigation, and a static completed-ride timer.
 Physical acceptance is still required for NEXT selection, interval-progress
 readability, and the scan-conflict retry path.
 
+The follow-up checkpoint `0ce346c` adds the explicit History `RETRY UPLOAD`
+command so a saved-ride retry cannot invoke workout synchronization. Host
+tests and the Debug CTest suite remain 2/2. The rebuilt application is
+`0x220b70` bytes with `0x1df490` free (47%); SHA-256 is
+`9e3ac95d1b352287a82045bdcff0eaa626845b2ca243de7698dddf991373f1de`.
+
 ## Exact home testing sequence (deferred)
 
 1. **Do not re-provision.** Bring the existing board, exact Zwift Hub One and

@@ -256,3 +256,21 @@ validated.
 - [ ] On-device acceptance of interval-progress and multiple-workout views
   remains open. Confirm that the pairing conflict message can be retried after
   automatic GATT setup settles and that NEXT cycles today's cached workouts.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Checkpoint `0ce346c` was built from a clean Git commit and flashed only
+  to application offset `0x20000`; esptool verified SHA-256
+  `9e3ac95d1b352287a82045bdcff0eaa626845b2ca243de7698dddf991373f1de`.
+  No bootloader, partition table, NVS, or LittleFS storage write was
+  performed.
+- [x] The image is `0x220b70` bytes with `0x1df490` free (47%). Boot evidence
+  confirmed the new app version, project partition table, LittleFS mount,
+  SH8601/LVGL startup, Wi-Fi recovery, three Intervals HTTP 200 responses,
+  BLE/GATT startup, and no panic/watchdog output.
+- [x] History retry is now explicitly labeled `RETRY UPLOAD` and routed to
+  the durable upload queue; Home `RETRY` remains workout synchronization.
+- [ ] Physically exercise a failed upload and confirm the new History action
+  retries it without changing the selected workout. Existing user acceptance
+  covers device connection, History navigation, and a static completed-ride
+  elapsed timer.

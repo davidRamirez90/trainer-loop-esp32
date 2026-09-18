@@ -119,6 +119,12 @@ The cache now keeps every supported workout returned for today. When more than
 one is available, Home/Preview shows an explicit `1/N` choice, offers a large
 NEXT button, and cycles the selection without changing the single-workout flow.
 
+The History screen's retry action now has its own command. `RETRY UPLOAD`
+re-queues only durable authentication/transient upload failures and schedules
+the upload worker immediately; Home `RETRY` remains the bounded Wi-Fi/time/
+workout-sync action. This prevents a history retry from incorrectly producing
+an Intervals workout-sync error.
+
 Checkpoint `79f587b` was built and flashed to the application slot only at
 `0x20000` (SHA-256
 `144ed3dcd6e9e3b9cc50d4ff841d4a7cd3fe41ae2753401e4070bf56a9a151e1`). A
@@ -130,3 +136,12 @@ Remaining work is physical acceptance of the interval-progress and
 multiple-workout views, exact trainer/HR pairing behavior under reconnect,
 safe ERG acknowledgements, and the release-gate endurance and reconnect tests
 in the checklist.
+
+Checkpoint `0ce346c` was then rebuilt and flashed only to application offset
+`0x20000` (SHA-256
+`9e3ac95d1b352287a82045bdcff0eaa626845b2ca243de7698dddf991373f1de`). The
+image is `0x220b70` bytes with `0x1df490` free (47%). A bounded monitor window
+confirmed the new app version, existing partition table, LittleFS mount,
+display readiness, Wi-Fi recovery, three Intervals HTTP 200 responses, BLE/GATT
+startup, and no panic/watchdog output. No bootloader, partition table, NVS, or
+storage write was performed.
