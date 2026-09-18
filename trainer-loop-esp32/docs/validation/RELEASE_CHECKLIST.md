@@ -440,11 +440,22 @@ history upload retry. Existing hardware ride and upload evidence remains
   rows, then continue explicit pairing, control acknowledgement, pause/stop
   safety, and endurance gates.
 
-## Pending application checkpoint — host-safe fallback warning fix
+## Latest application-only validation — 2026-09-18
 
 - [x] All `main/*.cpp` translation units pass the host-safe Clang `-Werror`
   syntax check; ESP-only startup and scan state no longer trigger unused-variable
   diagnostics in the fallback build.
 - [x] `make test` and CTest 2/2 pass after the fix.
-- [ ] Rebuild and flash the final application-only image, then repeat bounded
-  boot verification; physical pairing/readability and safety gates remain open.
+- [x] Clean ESP-IDF build produced app `6aba925`, size `0x222fb0` bytes with
+  `0x1dd050` free (47%); bootloader size is `0x5160`.
+- [x] The verified image SHA-256 is
+  `7b6797986fc608bf72f8020223c8cc89969458192d652fc9736c69e372703e03`.
+- [x] The image was written only to application offset `0x20000` after the
+  final source checkpoint. Bounded boot evidence captured LittleFS/LVGL
+  readiness, three Intervals HTTP 200 responses, BLE/GATT setup, and no
+  panic/watchdog output.
+- [x] No bootloader, partition table, NVS, LittleFS, erase, or
+  credential-bearing backup action was performed.
+- [ ] Physical readability/touch for the two-line pairing rows, explicit
+  pairing, control acknowledgement, pause/stop safety, and endurance gates
+  remain open.

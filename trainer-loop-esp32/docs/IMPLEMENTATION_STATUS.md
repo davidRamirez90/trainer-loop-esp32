@@ -285,3 +285,15 @@ The host-safe fallback build now also compiles every `main/*.cpp` translation
 unit with Clang `-Werror`; ESP-only retry state and startup-sync bookkeeping are
 guarded from non-ESP unused-variable diagnostics. This is a build-hygiene fix
 only and does not change the ESP runtime behavior.
+
+Checkpoint `6aba925` was rebuilt after the fallback warning fix as a clean
+`0x222fb0`-byte image with `0x1dd050` bytes free (47%) and SHA-256
+`7b6797986fc608bf72f8020223c8cc89969458192d652fc9736c69e372703e03`.
+It was written only to application offset `0x20000`; esptool reported a
+verified hash and performed the normal post-write reset. The bounded monitor
+then captured LittleFS/LVGL readiness, three Intervals HTTP 200 responses,
+BLE/GATT setup, and no panic/watchdog output. No bootloader, partition table,
+NVS, LittleFS, erase, or credential-bearing backup action was performed.
+The physical pairing-row readability/touch check, explicit trainer/HR
+selection, control acknowledgement, pause/stop safety, and endurance gates
+remain open.

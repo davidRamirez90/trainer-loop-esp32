@@ -342,10 +342,20 @@ setup with no panic/watchdog output.
 - [ ] Visually confirm the two-line pairing rows and touch feedback on the
   physical display; direct pairing, control safety, and endurance remain open.
 
-## Pending application checkpoint — host-safe fallback warning fix
+## Latest application-only validation — 2026-09-18
 
-- [x] Every `main/*.cpp` translation unit now passes Clang `-Werror` in the
-  non-ESP fallback build; ESP-only state is correctly guarded.
-- [x] `make test` and CTest 2/2 still pass after the warning fix.
-- [ ] Rebuild from the final checkpoint and update the application-only image;
-  the device remains on `6244923` until that write.
+- [x] Every `main/*.cpp` translation unit passes Clang `-Werror` in the
+  non-ESP fallback build; ESP-only retry and startup-sync state is guarded.
+- [x] `env -u IDF_PATH make test` and CTest 2/2 pass after the warning fix.
+- [x] A clean ESP-IDF build produced app `6aba925`, size `0x222fb0` bytes,
+  with `0x1dd050` free (47%); bootloader size remains `0x5160`.
+- [x] Image SHA-256 is
+  `7b6797986fc608bf72f8020223c8cc89969458192d652fc9736c69e372703e03`.
+- [x] The image was written only to application offset `0x20000`; esptool
+  verified the image hash and reset the board. No bootloader, partition table,
+  NVS, LittleFS, erase, or credential-bearing backup action was performed.
+- [x] Bounded monitor evidence after the write captured LittleFS/LVGL
+  readiness, three Intervals HTTP 200 responses, BLE/GATT setup, and no
+  panic/watchdog output.
+- [ ] Visually confirm the two-line pairing rows and touch feedback on the
+  physical display; direct pairing, control safety, and endurance remain open.
