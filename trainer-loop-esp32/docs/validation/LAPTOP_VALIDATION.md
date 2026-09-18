@@ -573,3 +573,17 @@ setup with no panic/watchdog output.
   `49de80598f2ac0db26498a7661f68d03f3f916c18c720d7b848d450e202f67fc`.
 - [ ] Enter ROM download mode, write only `0x20000`, then power-cycle once
   with the reconnecting reader active to validate delayed sync.
+
+## NimBLE PSRAM allocation follow-up — 2026-09-18
+
+- [x] The delayed-sync capture measured DMA largest-block collapse from
+  5,120 bytes before HTTP initialization to 2,176 bytes afterward; AES then
+  failed and the 752-byte partial JSON body failed structural validation.
+- [x] Checkpoint `f05d994` selects PSRAM for NimBLE host allocations while
+  preserving controller/DMA requirements. The 20-second startup delay remains
+  separately covered.
+- [x] Clean ESP-IDF build: app `0x224130` bytes, `0x1dbed0` free (46%),
+  bootloader `0x5160`, SHA-256
+  `62166f998d455288b703929fe81fd00f81bacb3df544db94a9a5f86e85f3b246`.
+- [ ] Flash `f05d994` at `0x20000` and capture complete HTTPS responses while
+  BLE trainer/HR links are connected.

@@ -489,3 +489,21 @@ The unflashed `977f434` application is `0x224130` bytes with `0x1dbed0` free
 The next hardware gate is an app-only write at `0x20000`, followed by a
 power-cycle capture that waits for the delayed sync and records the new
 DMA-capable heap margins and parser result.
+
+## NimBLE PSRAM allocation follow-up — 2026-09-18
+
+The delayed-sync capture confirmed the local failure: after HTTP client
+initialization the DMA-capable heap had only 2,176 bytes in its largest block;
+AES then failed while copying PSRAM TLS data through DMA scratch memory. The
+partial 752-byte JSON body was retained by `95c62b4` and correctly rejected by
+the JSON validator, so incomplete-body salvage does not mask truncation.
+
+Checkpoint `f05d994` selects PSRAM for NimBLE host allocations while retaining
+the controller and DMA-capable allocations in their required memory. This
+frees internal/DMA heap for HTTPS/AES; the 20-second startup delay remains as a
+separate transient-overlap guard. The clean image is `0x224130` bytes with
+`0x1dbed0` free (46%); bootloader size is `0x5160`; SHA-256 is
+`62166f998d455288b703929fe81fd00f81bacb3df544db94a9a5f86e85f3b246`.
+Host smoke, CTest 2/2, strict fallback syntax, and ESP-IDF build pass. The
+image is not yet flashed; the next gate is one app-only write at `0x20000` and
+an attached power-cycle capture with trainer and HR links available.

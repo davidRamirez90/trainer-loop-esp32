@@ -653,3 +653,13 @@ history upload retry. Existing hardware ride and upload evidence remains
   remains immediate. Host and ESP-IDF checks pass.
 - [ ] Flash `977f434` at application offset `0x20000` and capture the delayed
   sync with DMA-capable heap margins.
+
+## NimBLE PSRAM allocation follow-up — 2026-09-18
+
+- [x] The root cause is now evidenced as internal DMA heap exhaustion during
+  TLS/AES, not an Intervals 429 response.
+- [x] `f05d994` moves NimBLE host allocations to PSRAM and keeps the delayed
+  startup sync guard; laptop and ESP-IDF checks pass.
+- [ ] Flash and verify `f05d994` at application offset `0x20000`.
+- [ ] Confirm complete profile/events/ZWO responses and no AES allocation
+  failure with both BLE links available.
