@@ -86,6 +86,8 @@ struct UiSnapshot {
   std::string heart_rate_status;
   std::string wifi_status;
   std::string workout_name;
+  std::string local_date;
+  std::string cache_status;
   std::string interval_status;
   std::string fault;
   std::string safety_message;
@@ -133,6 +135,7 @@ Status save_ui_profile(SettingsStore& store, ProfileSettings profile, RideState 
                        const std::function<Status(const SettingsGeneration&)>& persist);
 Status adjust_ui_profile(ProfileSettings* profile, std::size_t field, int direction);
 TodayWorkoutSelection next_today_workout(TodayWorkoutSelection current);
+std::string ui_date_label(const std::string& local_date);
 UiSnapshot make_ui_snapshot(const CoordinatorSnapshot& coordinator, const Workout* workout = nullptr);
 const char* ui_screen_name(UiScreen screen);
 

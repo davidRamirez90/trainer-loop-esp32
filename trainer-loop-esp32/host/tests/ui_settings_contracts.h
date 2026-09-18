@@ -1,5 +1,7 @@
 void ui_settings_contracts() {
   using namespace trainer_loop;
+  assert(ui_date_label("2026-09-18") == "18 Sep");
+  assert(ui_date_label("not-a-date") == "not-a-date");
   assert(UiCommandType::kRetry != UiCommandType::kRetryUploads);
   std::uint64_t monotonic = 1000;
   TimeService time([&] { return monotonic; });

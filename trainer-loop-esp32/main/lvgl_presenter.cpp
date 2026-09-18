@@ -687,18 +687,32 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     char duration[16];
     char ftp[24];
     char today[192];
+    const std::string date_label = ui_date_label(snapshot.local_date);
     format_duration(duration, sizeof(duration), snapshot.workout_duration_ms);
     std::snprintf(ftp, sizeof(ftp), "%d W", snapshot.profile.ftp_watts);
+    std::snprintf(status, sizeof(status), "%s  •  %s",
+                  date_label.empty() ? "Today" : date_label.c_str(),
+                  snapshot.cache_status.empty() ? "status unavailable" : snapshot.cache_status.c_str());
+    const char* context = snapshot.screen == UiScreen::kPreview ? "Preview" : "Today";
+    const char* workout_name = snapshot.workout_name.empty()
+                                   ? "No workout selected"
+                                   : snapshot.workout_name.c_str();
     if (snapshot.today_workout_count > 1U) {
-      std::snprintf(today, sizeof(today), "%s%u/%u  |  %s",
-                    snapshot.screen == UiScreen::kPreview ? "Preview  " : "Today  ",
+      std::snprintf(today, sizeof(today), "%s %u/%u  |  %s\n%s • %u intervals",
+                    context,
                     static_cast<unsigned>(snapshot.today_workout_index + 1U),
                     static_cast<unsigned>(snapshot.today_workout_count),
-                    snapshot.workout_name.empty() ? "No workout selected" : snapshot.workout_name.c_str());
+                    workout_name, duration,
+                    static_cast<unsigned>(snapshot.interval_count));
     } else {
-      std::snprintf(today, sizeof(today), "%s%s",
-                    snapshot.screen == UiScreen::kPreview ? "Preview  |  " : "Today  |  ",
-                    snapshot.workout_name.empty() ? "No workout selected" : snapshot.workout_name.c_str());
+      if (snapshot.workout_name.empty()) {
+        std::snprintf(today, sizeof(today), "%s  |  %s", context, workout_name);
+      } else {
+        std::snprintf(today, sizeof(today), "%s  |  %s\n%s • %u interval%s",
+                      context, workout_name, duration,
+                      static_cast<unsigned>(snapshot.interval_count),
+                      snapshot.interval_count == 1U ? "" : "s");
+      }
     }
     lv_label_set_text(runtime_->objects.workout, today);
     lv_label_set_text(runtime_->objects.target_caption, "DURATION");

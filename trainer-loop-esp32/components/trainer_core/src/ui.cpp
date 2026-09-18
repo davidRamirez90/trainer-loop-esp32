@@ -1,6 +1,7 @@
 #include "trainer_loop/ui.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 namespace trainer_loop {
@@ -43,6 +44,23 @@ TodayWorkoutSelection next_today_workout(TodayWorkoutSelection current) {
   if (current.index >= current.count - 1U) current.index = 0U;
   else ++current.index;
   return current;
+}
+
+std::string ui_date_label(const std::string& local_date) {
+  if (local_date.size() != 10U || local_date[4] != '-' || local_date[7] != '-') return local_date;
+  const auto digit = [](char value) {
+    return value >= '0' && value <= '9';
+  };
+  for (std::size_t index : {0U, 1U, 2U, 3U, 5U, 6U, 8U, 9U}) {
+    if (!digit(local_date[index])) return local_date;
+  }
+  const int month = (local_date[5] - '0') * 10 + (local_date[6] - '0');
+  const int day = (local_date[8] - '0') * 10 + (local_date[9] - '0');
+  if (month < 1 || month > 12 || day < 1 || day > 31) return local_date;
+  static constexpr std::array<const char*, 12> kMonths = {
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+  return std::to_string(day) + " " + kMonths[static_cast<std::size_t>(month - 1)];
 }
 
 bool UiCommandQueue::push(UiCommand command) {

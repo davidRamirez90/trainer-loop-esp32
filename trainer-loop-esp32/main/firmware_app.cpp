@@ -307,6 +307,13 @@ UiSnapshot FirmwareApp::make_runtime_ui_snapshot(std::uint64_t now_ms) const {
   ui.busy = ui_busy_;
   ui.profile = settings_.current().profile;
   ui.wifi_status = wifi_.connected() ? "Wi-Fi connected" : "Wi-Fi offline";
+  if (time_.trusted()) {
+    ui.local_date = local_date_for_utc(
+        time_.snapshot().utc_ms, settings_.current().profile.timezone_rule);
+  }
+  ui.cache_status = wifi_.connected()
+                        ? "Wi-Fi synced"
+                        : (cached_workouts_.empty() ? "Wi-Fi offline" : "Offline · cached");
   if (!cached_workouts_.empty()) {
     ui.today_workout_index = std::min(active_cached_workout_index_, cached_workouts_.size() - 1U);
     ui.today_workout_count = cached_workouts_.size();
