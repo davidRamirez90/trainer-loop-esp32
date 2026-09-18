@@ -179,6 +179,14 @@ and ASan/UBSan run pass. The sanitizer run uses the macOS-compatible
 This checkpoint changes tests only. The flashed device image remains
 `796c401`.
 
+Checkpoint `6a6bfea` fixes daily cache replacement. A successful Intervals
+sync now removes stale same-day event records only after the new set is
+written; a successful empty response clears that date, and a failed write
+leaves existing records in place. Host tests cover both paths. The clean
+ESP-IDF image is `0x221af0` bytes with `0x1de510` free (47%); SHA-256 is
+`f59073d360236474e7bad3e88fab20a3d2753d426579e4818aafc4d1cfa30e6a`.
+No flash operation was performed; the device still runs `796c401`.
+
 ## Exact home testing sequence (deferred)
 
 1. **Do not re-provision.** Bring the existing board, exact Zwift Hub One and

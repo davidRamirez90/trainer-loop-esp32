@@ -179,3 +179,13 @@ detector and reports no memory or undefined-behavior findings. This is a
 test-only checkpoint; the device continues to run the flashed application
 image `796c401`. Physical touch/readability, reconnect, control-acknowledgement,
 and endurance gates remain open.
+
+Checkpoint `6a6bfea` makes each successful daily sync replace the cached
+workout set for that local date. Stale same-day event records are pruned only
+after all downloaded records have been written; a successful empty response
+clears that date, while network/download/write failures leave the prior set
+available. Host tests cover replacement, empty responses, and a failed write
+that must not prune existing records. The clean ESP build is `0x221af0` bytes
+with `0x1de510` free (47%); SHA-256 is
+`f59073d360236474e7bad3e88fab20a3d2753d426579e4818aafc4d1cfa30e6a`.
+This checkpoint has not been flashed; the device remains on `796c401`.
