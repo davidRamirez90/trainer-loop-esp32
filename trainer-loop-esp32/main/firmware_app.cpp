@@ -35,11 +35,13 @@ void configure_timezone(const ProfileSettings& profile) {
 }
 
 void log_runtime_health(const char* stage) {
-  ESP_LOGI("trainer_app", "retry stage=%s stack_free=%u internal_free=%u largest=%u",
+  ESP_LOGI("trainer_app", "retry stage=%s stack_free=%u internal_free=%u largest=%u dma_free=%u dma_largest=%u",
            stage == nullptr ? "unknown" : stage,
            static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)),
            static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
-           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)));
+           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_DMA | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_DMA | MALLOC_CAP_8BIT)));
 }
 
 }  // namespace
@@ -939,7 +941,8 @@ void FirmwareApp::runtime_loop() {
       }
     }
     const RideState state_before_auto_retry = coordinator_.snapshot().state;
-    if (sync_retry_.due(now_ms, session_is_active(state_before_auto_retry), ui_busy_)) {
+    if (!ble_.connection_manager().network_sync_blocked() &&
+        sync_retry_.due(now_ms, session_is_active(state_before_auto_retry), ui_busy_)) {
       ESP_LOGI("trainer_app", "automatic workout sync retry starting (failure=%u)",
                static_cast<unsigned>(sync_retry_.failures()));
       sync_retry_.begin();

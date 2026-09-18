@@ -87,16 +87,20 @@ Result<HttpResponse> IntervalsHttpClient::execute(const HttpRequest& request) co
   // records too, so an unspecified family can select an unreachable IPv6
   // route and consume the full connection timeout before falling back.
   config.addr_type = HTTP_ADDR_TYPE_INET;
-  ESP_LOGI(kTag, "before init internal free=%u largest=%u psram free=%u largest=%u",
+  ESP_LOGI(kTag, "before init internal free=%u largest=%u dma_free=%u dma_largest=%u psram free=%u largest=%u",
            static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_DMA | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_DMA | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)));
   esp_http_client_handle_t client = esp_http_client_init(&config);
   if (client == nullptr) return Result<HttpResponse>::failure(ErrorCode::kTransport, "Intervals HTTP init failed");
-  ESP_LOGI(kTag, "after init internal free=%u largest=%u psram free=%u largest=%u",
+  ESP_LOGI(kTag, "after init internal free=%u largest=%u dma_free=%u dma_largest=%u psram free=%u largest=%u",
            static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_DMA | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_DMA | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)));
   esp_err_t error = esp_http_client_set_method(client, request.method == "POST" ? HTTP_METHOD_POST : HTTP_METHOD_GET);
@@ -111,10 +115,12 @@ Result<HttpResponse> IntervalsHttpClient::execute(const HttpRequest& request) co
   }
   if (error == ESP_OK) error = esp_http_client_perform(client);
   const int status = esp_http_client_get_status_code(client);
-  ESP_LOGI(kTag, "perform error=%s status=%d internal free=%u largest=%u psram free=%u largest=%u",
+  ESP_LOGI(kTag, "perform error=%s status=%d internal free=%u largest=%u dma_free=%u dma_largest=%u psram free=%u largest=%u",
            esp_err_to_name(error), status,
            static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_DMA | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_DMA | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)));
   esp_http_client_cleanup(client);

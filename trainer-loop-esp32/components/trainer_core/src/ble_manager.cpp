@@ -85,6 +85,15 @@ Status BleConnectionManager::scan_finished() {
   return Status::ok();
 }
 
+bool BleConnectionManager::network_sync_blocked() const {
+  if (scanning_) return true;
+  const auto discovery_active = [](const Link& link) {
+    return link.selected.has_value() && link.reconnect.link == LinkState::kConnected &&
+           !link.reconnect.services_ready;
+  };
+  return discovery_active(trainer_) || discovery_active(heart_rate_);
+}
+
 Status BleConnectionManager::connected(PeripheralRole role, std::uint64_t now_ms) {
   Link* link = &link_for(role);
   if (!link->selected.has_value()) return Status::failure(ErrorCode::kConflict, "unselected BLE device connected");

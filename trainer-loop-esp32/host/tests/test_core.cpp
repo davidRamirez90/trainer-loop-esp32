@@ -533,7 +533,11 @@ int main() {
   trainer_loop::BleConnectionManager connections;
   trainer_loop::DeviceIdentity trainer_identity{{1, 2, 3, 4, 5, 6}, 0U, "Hub", -40, trainer_loop::PeripheralRole::kTrainer};
   assert(connections.select(trainer_identity));
+  assert(!connections.network_sync_blocked());
   assert(connections.connected(trainer_loop::PeripheralRole::kTrainer, 0U));
+  assert(connections.network_sync_blocked());
+  assert(connections.services_ready(trainer_loop::PeripheralRole::kTrainer));
+  assert(!connections.network_sync_blocked());
   const std::uint32_t connected_generation = connections.state(trainer_loop::PeripheralRole::kTrainer).generation;
   assert(connections.disconnected(trainer_loop::PeripheralRole::kTrainer, 0U));
   assert(connections.state(trainer_loop::PeripheralRole::kTrainer).generation > connected_generation);
@@ -545,7 +549,9 @@ int main() {
   assert(connections.select(heart_rate_identity));
   assert(!connections.scanning());
   assert(connections.selected(trainer_loop::PeripheralRole::kHeartRate).has_value());
+  assert(!connections.network_sync_blocked());
   assert(connections.scan_started(100U));
+  assert(connections.network_sync_blocked());
   assert(connections.poll_scan(15100U));
   assert(!connections.scanning());
 

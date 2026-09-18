@@ -49,6 +49,9 @@ class BleConnectionManager {
   Status mark_control_invalid(std::uint64_t now_ms);
 
   bool scanning() const { return scanning_; }
+  // Network TLS should wait while a selected BLE link is connected but its
+  // service discovery is still allocating host/DMA buffers.
+  bool network_sync_blocked() const;
   const ReconnectState& state(PeripheralRole role) const;
   const std::optional<DeviceIdentity>& selected(PeripheralRole role) const;
   bool reconnect_due(PeripheralRole role, std::uint64_t now_ms) const;
