@@ -274,3 +274,23 @@ validated.
   retries it without changing the selected workout. Existing user acceptance
   covers device connection, History navigation, and a static completed-ride
   elapsed timer.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Checkpoint `11c1ddc` was built from a clean Git commit and flashed only
+  to application offset `0x20000`; esptool verified SHA-256
+  `e6bc78e18a9009cd9bb7bf180d4e3d147553957deca04ae0b022e596baac7005`.
+  No bootloader, partition table, NVS, or LittleFS storage write was
+  performed.
+- [x] The image is `0x220f70` bytes with `0x1df090` free (47%). Boot evidence
+  confirmed app version `11c1ddc`, the project partition table, LittleFS
+  mount, SH8601/LVGL startup, Wi-Fi recovery, three Intervals HTTP 200
+  responses, BLE/GATT startup, and no panic/watchdog output.
+- [x] Host `make test`, Debug CMake build and CTest 2/2 passed, including the
+  independent FIT validator. The date-label behavior was added test-first.
+- [x] A live camera spot-check showed the inset Home status line, workout
+  context and larger action targets on the physical display.
+- [ ] Complete direct touch/readability acceptance, including the Home/Preview
+  two-line workout label, all four touch corners, pairing scan retry and
+  history upload retry. Existing hardware ride and upload evidence remains
+  valid; this visual spot-check does not close those release gates.

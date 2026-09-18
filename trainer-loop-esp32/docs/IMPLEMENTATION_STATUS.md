@@ -145,3 +145,17 @@ confirmed the new app version, existing partition table, LittleFS mount,
 display readiness, Wi-Fi recovery, three Intervals HTTP 200 responses, BLE/GATT
 startup, and no panic/watchdog output. No bootloader, partition table, NVS, or
 storage write was performed.
+
+Checkpoint `11c1ddc` adds the Home date/cache status line and a two-line
+workout context (`Today`/`Preview`, duration and interval count), plus the
+test-first date-label contract. It also keeps the Home synchronization retry
+separate from the History upload retry. The clean ESP build is `0x220f70`
+bytes with `0x1df090` free (47%); SHA-256 is
+`e6bc78e18a9009cd9bb7bf180d4e3d147553957deca04ae0b022e596baac7005`.
+Only application offset `0x20000` was written. The bounded monitor confirmed
+app version `11c1ddc`, the project partition table, LittleFS mount,
+SH8601/LVGL readiness, automatic Wi-Fi recovery, three Intervals HTTP 200
+responses, BLE/GATT startup, and no panic/watchdog output. A live camera
+spot-check showed the inset status line, selected-workout context and larger
+action targets on the physical display; formal touch/readability acceptance
+remains open.

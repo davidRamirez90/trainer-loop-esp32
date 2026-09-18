@@ -146,12 +146,25 @@ tests and the Debug CTest suite remain 2/2. The rebuilt application is
 `0x220b70` bytes with `0x1df490` free (47%); SHA-256 is
 `9e3ac95d1b352287a82045bdcff0eaa626845b2ca243de7698dddf991373f1de`.
 
+Checkpoint `11c1ddc` adds the Home date/cache status line and a two-line
+workout context with duration and interval count. The date-label helper was
+added test-first; `env -u IDF_PATH make test`, the Debug CMake build and CTest
+2/2 (including the independent FIT validator) pass. The clean ESP image is
+`0x220f70` bytes with `0x1df090` free (47%); SHA-256 is
+`e6bc78e18a9009cd9bb7bf180d4e3d147553957deca04ae0b022e596baac7005`.
+Only application offset `0x20000` was written. Monitor evidence confirms
+app version `11c1ddc`, the project partition table, LittleFS/LVGL startup,
+Wi-Fi recovery, three Intervals HTTP 200 responses, BLE/GATT startup and no
+panic/watchdog output. A live camera preview showed the inset status line and
+the selected-workout context on the real display; direct physical readability
+and touch acceptance remain open.
+
 ## Exact home testing sequence (deferred)
 
 1. **Do not re-provision.** Bring the existing board, exact Zwift Hub One and
    Garmin strap home. Record their firmware/model identities. Keep a rider able
    to stop pedaling immediately and use low workloads for all initial tests.
-2. The board now runs checkpoint `99c1e1d` from an application-only write at
+2. The board now runs checkpoint `11c1ddc` from an application-only write at
    `0x20000`; existing NVS and storage were left untouched, and no
    credential-bearing backup was made. Never use `erase-flash`, change security
    settings, or re-provision as part of this validation record.
