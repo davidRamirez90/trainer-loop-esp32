@@ -255,6 +255,16 @@ const char* compact_upload_state(const std::string& status) {
   return "--";
 }
 
+std::string friendly_upload_state(const std::string& status) {
+  if (status == "UPLOADED") return "Uploaded";
+  if (status == "PENDING" || status == "FIT_PENDING") return "Upload pending";
+  if (status == "UPLOADING") return "Uploading";
+  if (status == "RETRY_WAIT") return "Upload will retry";
+  if (status == "AUTH_BLOCKED") return "Upload blocked — check credentials";
+  if (status == "PERMANENT_ERROR") return "Upload failed — retry from Home";
+  return status.empty() ? "Saved locally" : status;
+}
+
 bool create_ui(LvglPresenter::Runtime* runtime) {
   lv_obj_t* root = lv_screen_active();
   if (root == nullptr) return false;
@@ -747,10 +757,11 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
       format_duration(duration, sizeof(duration), entry.summary.wall_ms);
       const char* completion = entry.summary.interrupted ? "Partial" :
                                (entry.summary.complete ? "Complete" : "Saved");
+      const std::string upload_status = friendly_upload_state(entry.upload_status);
       std::snprintf(text, sizeof(text), "%s  •  %s\n%s  •  %s",
                     entry.summary.workout_name.empty() ? "Unnamed workout" : entry.summary.workout_name.c_str(),
                     duration, completion,
-                    entry.upload_status.empty() ? "Saved locally" : entry.upload_status.c_str());
+                    upload_status.c_str());
       lv_label_set_text(runtime_->objects.history_labels[index], text);
       lv_obj_remove_flag(runtime_->objects.history_rows[index], LV_OBJ_FLAG_HIDDEN);
       lv_obj_set_state(runtime_->objects.history_rows[index], LV_STATE_DISABLED, snapshot.busy);
@@ -781,8 +792,10 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     lv_label_set_text(runtime_->objects.sensors, summary_line);
     lv_label_set_text(runtime_->objects.timing, "");
     lv_label_set_text(runtime_->objects.terrain, terrain_summary);
-    lv_label_set_text(runtime_->objects.safety,
-                      detail == nullptr ? snapshot.fault.c_str() : detail->upload_status.c_str());
+    const std::string upload_status = detail == nullptr
+                                          ? snapshot.fault
+                                          : friendly_upload_state(detail->upload_status);
+    lv_label_set_text(runtime_->objects.safety, upload_status.c_str());
   }
   if (snapshot.screen == UiScreen::kCompletion) {
     char duration[16];
@@ -818,9 +831,7 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     lv_label_set_text(runtime_->objects.sensors, summary_line);
     lv_label_set_text(runtime_->objects.timing, "");
     lv_label_set_text(runtime_->objects.terrain, terrain_summary);
-    const std::string upload_message = snapshot.completion_upload_status.empty()
-                                           ? "Saved on device"
-                                           : snapshot.completion_upload_status;
+    const std::string upload_message = friendly_upload_state(snapshot.completion_upload_status);
     lv_label_set_text(runtime_->objects.safety, upload_message.c_str());
   }
 
