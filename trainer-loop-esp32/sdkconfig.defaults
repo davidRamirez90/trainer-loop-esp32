@@ -23,6 +23,10 @@ CONFIG_FREERTOS_HZ=1000
 # record buffers on demand so the TLS handshake reserves only what it needs.
 CONFIG_MBEDTLS_DYNAMIC_BUFFER=y
 CONFIG_MBEDTLS_DYNAMIC_FREE_CONFIG_DATA=y
+# Intervals requests are small and the server accepts fragmented TLS records.
+# Keep the outgoing record buffer below the 4 KiB default while preserving the
+# full incoming fragment limit for certificate and API responses.
+CONFIG_MBEDTLS_SSL_OUT_CONTENT_LEN=2048
 
 # BLE-only NimBLE central for trainer and heart-rate peripherals.
 CONFIG_BT_ENABLED=y
