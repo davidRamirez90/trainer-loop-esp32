@@ -613,3 +613,20 @@ history upload retry. Existing hardware ride and upload evidence remains
   LittleFS, erase, or credential-bearing backup action was performed.
 - [ ] Visually confirm the new busy message during one Retry attempt while the
   trainer is out of range; no reset event was captured in the bounded window.
+
+## Fast-ready boot checkpoint — 2026-09-18
+
+- [x] Checkpoint `6b832c2` defers provisioned Wi-Fi/SNTP/Intervals sync until
+  after the ready UI and runtime task are running. The bounded boot trace
+  reached the runtime task at approximately 2.3 seconds; network sync then
+  continued in the background.
+- [x] Clean ESP-IDF image: `0x223ed0` bytes, `0x1dc130` free (46%), bootloader
+  `0x5160`; SHA-256
+  `d4992464519e98b948c26cbce8d6791b7a2488cef6fed9af02417834d4b53f9a`.
+- [x] App-only write at `0x20000` completed after manual download-mode entry,
+  with esptool hash verification. No bootloader, partition table, NVS,
+  LittleFS, erase, or credential-bearing backup action was performed.
+- [x] The trace showed no panic/watchdog output. One later HTTP 200 response
+  ended with incomplete transport data and was retained as a sync failure for
+  automatic retry.
+- [ ] Visually confirm the faster Home/ready transition on the device.

@@ -498,6 +498,20 @@ setup with no panic/watchdog output.
   table, NVS, LittleFS, erase, or credential-bearing backup action was
   performed. Visual hardware confirmation remains open.
 
+## Fast-ready boot checkpoint — 2026-09-18
+
+- `6b832c2` moves provisioned boot-time Wi-Fi/SNTP/Intervals work behind the
+  runtime task. This preserves automatic sync/backoff while allowing the
+  ready UI to appear before network waits.
+- `env -u IDF_PATH make test`, Debug CTest 2/2, and the clean ESP-IDF build
+  pass. The image is `0x223ed0` bytes with `0x1dc130` free (46%); bootloader
+  `0x5160`; SHA-256
+  `d4992464519e98b948c26cbce8d6791b7a2488cef6fed9af02417834d4b53f9a`.
+- The image was written only at `0x20000` after manual download-mode entry;
+  esptool verified the hash. The boot trace reached the runtime task at about
+  2.3 seconds, then performed background Wi-Fi and sync work. No destructive
+  flash/storage operation or credential-bearing backup was performed.
+
 ## Latest application-only validation — 2026-09-18
 
 - `e3e8d6d` adds `ButtonGesture`, a portable 40 ms debounce/1 s long-press

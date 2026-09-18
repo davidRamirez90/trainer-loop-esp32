@@ -421,3 +421,19 @@ download mode; esptool verified the image hash. No bootloader, partition table,
 NVS, LittleFS, erase, or credential-bearing backup action was performed.
 The passive post-flash window contained no reset event; visual confirmation of
 the busy message remains the hands-on check.
+
+Checkpoint `6b832c2` removes the synchronous Wi-Fi/SNTP/Intervals sequence
+from the provisioned boot path. Storage, display, BLE, and the runtime task
+now establish the ready UI first; the existing bounded sync retry performs
+network work afterward. The clean ESP-IDF image is `0x223ed0` bytes with
+`0x1dc130` bytes free (46%) and SHA-256
+`d4992464519e98b948c26cbce8d6791b7a2488cef6fed9af02417834d4b53f9a`.
+It was flashed only at application offset `0x20000` after manual download-mode
+entry, with esptool hash verification. The boot trace reached the runtime task
+and ready path at approximately 2.3 seconds; Wi-Fi and Intervals sync then ran
+in the background. No bootloader, partition table, NVS, LittleFS, erase, or
+credential-bearing backup action was performed.
+
+That bounded trace also recorded one HTTP 200 response whose transport ended
+with incomplete data; the response was treated as a sync failure and the
+durable retry policy remained active. No panic or watchdog output appeared.
