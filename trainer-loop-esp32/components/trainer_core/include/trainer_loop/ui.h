@@ -6,6 +6,7 @@
 #include "trainer_loop/state_machine.h"
 
 #include "trainer_loop/settings.h"
+#include <array>
 #include <functional>
 #include <cstddef>
 #include <cstdint>
@@ -14,6 +15,8 @@
 #include <vector>
 
 namespace trainer_loop {
+
+constexpr std::size_t kUiProfileBars = 8U;
 
 enum class UiScreen : std::uint8_t {
   kSetup,
@@ -96,6 +99,8 @@ struct UiSnapshot {
   std::size_t today_workout_count = 0U;
   std::size_t interval_index = 0U;
   std::size_t interval_count = 0U;
+  std::array<std::uint8_t, kUiProfileBars> workout_profile{};
+  std::size_t workout_profile_count = 0U;
   std::uint32_t interval_elapsed_ms = 0U;
   std::uint32_t interval_remaining_ms = 0U;
   std::uint8_t workout_progress_percent = 0U;

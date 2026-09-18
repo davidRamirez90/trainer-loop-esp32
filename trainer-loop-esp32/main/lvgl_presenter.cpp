@@ -53,6 +53,7 @@ struct UiObjects {
   lv_obj_t* timing = nullptr;
   lv_obj_t* terrain = nullptr;
   lv_obj_t* safety = nullptr;
+  lv_obj_t* profile_bars[kUiProfileBars]{};
   lv_obj_t* setup_title = nullptr;
   lv_obj_t* setup_instruction = nullptr;
   lv_obj_t* setup_ssid = nullptr;
@@ -289,6 +290,17 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
   runtime->objects.timing = make_label(root, 12, 202, 344, 38, &lv_font_montserrat_24, white);
   runtime->objects.terrain = make_label(root, 12, 248, 344, 68, &lv_font_montserrat_24, white);
   runtime->objects.safety = make_label(root, 12, 320, 344, 38, &lv_font_montserrat_14, warning);
+  for (std::size_t index = 0U; index < kUiProfileBars; ++index) {
+    runtime->objects.profile_bars[index] = lv_obj_create(root);
+    if (runtime->objects.profile_bars[index] == nullptr) return false;
+    lv_obj_set_pos(runtime->objects.profile_bars[index], 12 + static_cast<int>(index) * 42, 188);
+    lv_obj_set_size(runtime->objects.profile_bars[index], 36, 14);
+    lv_obj_set_style_bg_color(runtime->objects.profile_bars[index], lv_color_hex(0x45D6A5), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(runtime->objects.profile_bars[index], LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_width(runtime->objects.profile_bars[index], 0, LV_PART_MAIN);
+    lv_obj_set_style_radius(runtime->objects.profile_bars[index], 4, LV_PART_MAIN);
+    lv_obj_add_flag(runtime->objects.profile_bars[index], LV_OBJ_FLAG_HIDDEN);
+  }
   runtime->objects.setup_title = make_label(root, 12, 8, 344, 32, &lv_font_montserrat_24, white);
   runtime->objects.setup_instruction = make_label(root, 12, 42, 344, 22, &lv_font_montserrat_14, muted);
   runtime->objects.setup_ssid = make_label(root, 12, 76, 344, 34, &lv_font_montserrat_24, white);
@@ -316,7 +328,7 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
     auto* button = lv_button_create(root);
     runtime->objects.extra[i] = button;
     if (!button) return false;
-    lv_obj_set_pos(button, 12 + static_cast<int>(i % 2) * 176, 202 + static_cast<int>(i / 2) * 56);
+    lv_obj_set_pos(button, 12 + static_cast<int>(i % 2) * 176, 210 + static_cast<int>(i / 2) * 56);
     lv_obj_set_size(button, 168, 48);
     style_button(button, lv_color_hex(0x183C32), lv_color_hex(0x45D6A5),
                  lv_color_hex(0x252A30), 12);
@@ -546,6 +558,7 @@ Status LvglPresenter::show_setup(const SetupCredentials& credentials) {
   lv_obj_add_flag(runtime_->objects.timing, LV_OBJ_FLAG_HIDDEN);
   lv_obj_add_flag(runtime_->objects.terrain, LV_OBJ_FLAG_HIDDEN);
   lv_obj_add_flag(runtime_->objects.safety, LV_OBJ_FLAG_HIDDEN);
+  for (auto* bar : runtime_->objects.profile_bars) lv_obj_add_flag(bar, LV_OBJ_FLAG_HIDDEN);
   lv_obj_add_flag(runtime_->objects.action, LV_OBJ_FLAG_HIDDEN);
   lv_obj_add_flag(runtime_->objects.history_button, LV_OBJ_FLAG_HIDDEN);
   for (std::size_t index = 0U; index < kPairingRows; ++index) {
@@ -600,6 +613,7 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
   lv_obj_remove_flag(runtime_->objects.timing, LV_OBJ_FLAG_HIDDEN);
   lv_obj_remove_flag(runtime_->objects.terrain, LV_OBJ_FLAG_HIDDEN);
   lv_obj_remove_flag(runtime_->objects.safety, LV_OBJ_FLAG_HIDDEN);
+  for (auto* bar : runtime_->objects.profile_bars) lv_obj_add_flag(bar, LV_OBJ_FLAG_HIDDEN);
   lv_obj_remove_flag(runtime_->objects.action, LV_OBJ_FLAG_HIDDEN);
   lv_obj_add_flag(runtime_->objects.setup_title, LV_OBJ_FLAG_HIDDEN);
   lv_obj_add_flag(runtime_->objects.setup_instruction, LV_OBJ_FLAG_HIDDEN);
@@ -725,6 +739,17 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
                   compact_link_state(snapshot.trainer_status),
                   compact_link_state(snapshot.heart_rate_status));
     lv_label_set_text(runtime_->objects.sensors, readiness);
+    for (std::size_t index = 0U; index < snapshot.workout_profile_count && index < kUiProfileBars; ++index) {
+      const std::uint8_t level = snapshot.workout_profile[index];
+      const lv_coord_t height = static_cast<lv_coord_t>(4 + (static_cast<unsigned>(level) * 10U) / 100U);
+      lv_obj_set_pos(runtime_->objects.profile_bars[index], 12 + static_cast<int>(index) * 42,
+                     202 - height);
+      lv_obj_set_size(runtime_->objects.profile_bars[index], 36, height);
+      lv_obj_set_style_bg_color(runtime_->objects.profile_bars[index],
+                                level >= 70U ? lv_color_hex(0xFFB547) : lv_color_hex(0x45D6A5),
+                                LV_PART_MAIN);
+      lv_obj_remove_flag(runtime_->objects.profile_bars[index], LV_OBJ_FLAG_HIDDEN);
+    }
     if (snapshot.today_workout_count > 1U && snapshot.safety_message.empty() &&
         (snapshot.fault.empty() || snapshot.fault == "Multiple workouts found — use NEXT" ||
          snapshot.fault.find("selected") != std::string::npos)) {

@@ -63,6 +63,33 @@ std::string ui_date_label(const std::string& local_date) {
   return std::to_string(day) + " " + kMonths[static_cast<std::size_t>(month - 1)];
 }
 
+namespace {
+
+void fill_workout_profile(UiSnapshot* snapshot, const Workout& workout) {
+  if (snapshot == nullptr || workout.segments.empty()) return;
+  const std::size_t bar_count = std::min(workout.segments.size(), kUiProfileBars);
+  double maximum = 0.0;
+  for (const auto& segment : workout.segments) {
+    maximum = std::max(maximum, std::max({segment.start_high, segment.end_high,
+                                          segment.start_low, segment.end_low}));
+  }
+  snapshot->workout_profile_count = bar_count;
+  if (maximum <= 0.0) return;
+  for (std::size_t index = 0U; index < workout.segments.size(); ++index) {
+    const auto& segment = workout.segments[index];
+    const double level = std::max({segment.start_high, segment.end_high,
+                                   segment.start_low, segment.end_low});
+    const std::size_t bucket = workout.segments.size() <= kUiProfileBars
+                                   ? index
+                                   : std::min((index * kUiProfileBars) / workout.segments.size(),
+                                              kUiProfileBars - 1U);
+    const auto normalized = static_cast<std::uint8_t>(std::clamp(level * 100.0 / maximum, 0.0, 100.0));
+    snapshot->workout_profile[bucket] = std::max(snapshot->workout_profile[bucket], normalized);
+  }
+}
+
+}  // namespace
+
 bool UiCommandQueue::push(UiCommand command) {
   if (size_ >= kCapacity) return false;
   commands_[tail_] = command;
@@ -122,6 +149,7 @@ UiSnapshot make_ui_snapshot(const CoordinatorSnapshot& coordinator, const Workou
     snapshot.workout_name = workout->name;
     snapshot.workout_duration_ms = workout->duration_ms();
     snapshot.interval_count = workout->segments.size();
+    fill_workout_profile(&snapshot, *workout);
     const std::uint32_t duration_ms = workout->duration_ms();
     const std::uint32_t plan_ms = std::min(coordinator.clocks.plan_ms, duration_ms);
     if (duration_ms > 0U) {

@@ -561,6 +561,7 @@ int main() {
   trainer_loop::WorkoutSegment second_segment = progress_workout.segments.front();
   second_segment.id = "two";
   second_segment.name = "Hard";
+  second_segment.start_low = second_segment.start_high = second_segment.end_low = second_segment.end_high = 1.2;
   progress_workout.segments.push_back(second_segment);
   trainer_loop::CoordinatorSnapshot progress_snapshot;
   progress_snapshot.state = trainer_loop::RideState::kRunning;
@@ -570,6 +571,8 @@ int main() {
   const auto progress_ui = trainer_loop::make_ui_snapshot(progress_snapshot, &progress_workout);
   assert(progress_ui.interval_count == 2U && progress_ui.interval_index == 1U);
   assert(progress_ui.interval_remaining_ms == 7500U && progress_ui.workout_progress_percent == 62U);
+  assert(progress_ui.workout_profile_count == 2U);
+  assert(progress_ui.workout_profile[0] == 66U && progress_ui.workout_profile[1] == 100U);
   assert(coordinator.end_and_save(10000U));
   assert(coordinator.snapshot().state == trainer_loop::RideState::kComplete);
   assert(coordinator.snapshot().complete == false);
