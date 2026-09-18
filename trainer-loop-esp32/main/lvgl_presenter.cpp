@@ -662,6 +662,24 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
   lv_label_set_text(runtime_->objects.terrain, terrain);
   lv_label_set_text(runtime_->objects.safety, safety);
 
+  if (snapshot.screen == UiScreen::kActive && snapshot.interval_count > 0U) {
+    char active_time[16];
+    char interval_left[16];
+    char active_timing[64];
+    format_duration(active_time, sizeof(active_time), snapshot.elapsed_active_ms);
+    format_duration(interval_left, sizeof(interval_left), snapshot.interval_remaining_ms);
+    std::snprintf(active_timing, sizeof(active_timing), "%s active   %s left", active_time, interval_left);
+    lv_label_set_text(runtime_->objects.timing, active_timing);
+    if (snapshot.safety_message.empty() && snapshot.fault.empty()) {
+      char progress[64];
+      std::snprintf(progress, sizeof(progress), "Interval %u/%u  •  %u%% workout",
+                    static_cast<unsigned>(snapshot.interval_index + 1U),
+                    static_cast<unsigned>(snapshot.interval_count),
+                    static_cast<unsigned>(snapshot.workout_progress_percent));
+      lv_label_set_text(runtime_->objects.safety, progress);
+    }
+  }
+
   if (snapshot.screen == UiScreen::kHome || snapshot.screen == UiScreen::kPreview) {
     char duration[16];
     char ftp[24];

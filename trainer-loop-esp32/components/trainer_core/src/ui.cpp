@@ -103,8 +103,32 @@ UiSnapshot make_ui_snapshot(const CoordinatorSnapshot& coordinator, const Workou
   if (workout != nullptr) {
     snapshot.workout_name = workout->name;
     snapshot.workout_duration_ms = workout->duration_ms();
-    snapshot.interval_status = std::to_string(
-        std::min<std::uint32_t>(coordinator.clocks.plan_ms / 1000U, workout->duration_ms() / 1000U)) + " s";
+    snapshot.interval_count = workout->segments.size();
+    const std::uint32_t duration_ms = workout->duration_ms();
+    const std::uint32_t plan_ms = std::min(coordinator.clocks.plan_ms, duration_ms);
+    if (duration_ms > 0U) {
+      const std::uint64_t scaled_progress = static_cast<std::uint64_t>(plan_ms) * 100U /
+                                            static_cast<std::uint64_t>(duration_ms);
+      snapshot.workout_progress_percent = static_cast<std::uint8_t>(std::min<std::uint64_t>(scaled_progress, 100U));
+    }
+    std::uint32_t cursor_ms = 0U;
+    for (std::size_t index = 0U; index < workout->segments.size(); ++index) {
+      const std::uint32_t segment_duration = workout->segments[index].duration_ms;
+      const std::uint64_t segment_end = static_cast<std::uint64_t>(cursor_ms) + segment_duration;
+      if (plan_ms < segment_end || index + 1U == workout->segments.size()) {
+        snapshot.interval_index = index;
+        snapshot.interval_elapsed_ms = plan_ms > cursor_ms ? plan_ms - cursor_ms : 0U;
+        snapshot.interval_remaining_ms = segment_duration > snapshot.interval_elapsed_ms
+                                             ? segment_duration - snapshot.interval_elapsed_ms
+                                             : 0U;
+        break;
+      }
+      cursor_ms = static_cast<std::uint32_t>(segment_end);
+    }
+    if (snapshot.interval_count > 0U) {
+      snapshot.interval_status = std::to_string(snapshot.interval_index + 1U) + "/" +
+                                 std::to_string(snapshot.interval_count);
+    }
   }
   switch (coordinator.state) {
     case RideState::kRunning:

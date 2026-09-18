@@ -91,6 +91,11 @@ struct UiSnapshot {
   std::string completion_upload_status;
   std::size_t today_workout_index = 0U;
   std::size_t today_workout_count = 0U;
+  std::size_t interval_index = 0U;
+  std::size_t interval_count = 0U;
+  std::uint32_t interval_elapsed_ms = 0U;
+  std::uint32_t interval_remaining_ms = 0U;
+  std::uint8_t workout_progress_percent = 0U;
   std::uint32_t elapsed_active_ms = 0U;
   std::uint32_t elapsed_wall_ms = 0U;
   std::uint32_t workout_duration_ms = 0U;
