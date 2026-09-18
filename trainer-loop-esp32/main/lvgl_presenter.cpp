@@ -246,6 +246,15 @@ const char* compact_link_state(const std::string& status) {
   return "--";
 }
 
+const char* compact_upload_state(const std::string& status) {
+  if (status == "UPLOADED") return "SENT";
+  if (status == "PENDING" || status == "FIT_PENDING" || status == "UPLOADING") return "WAIT";
+  if (status == "RETRY_WAIT") return "RETRY";
+  if (status == "AUTH_BLOCKED") return "BLOCK";
+  if (status == "PERMANENT_ERROR") return "ERR";
+  return "--";
+}
+
 bool create_ui(LvglPresenter::Runtime* runtime) {
   lv_obj_t* root = lv_screen_active();
   if (root == nullptr) return false;
@@ -364,8 +373,8 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
   for (std::size_t index = 0U; index < kHistoryRows; ++index) {
     runtime->objects.history_rows[index] = lv_button_create(root);
     if (runtime->objects.history_rows[index] == nullptr) return false;
-    lv_obj_set_pos(runtime->objects.history_rows[index], 12, 88 + static_cast<int>(index) * 66);
-    lv_obj_set_size(runtime->objects.history_rows[index], 344, 56);
+    lv_obj_set_pos(runtime->objects.history_rows[index], 12, 88 + static_cast<int>(index) * 58);
+    lv_obj_set_size(runtime->objects.history_rows[index], 344, 52);
     style_button(runtime->objects.history_rows[index], lv_color_hex(0x183C32), lv_color_hex(0x45D6A5),
                  lv_color_hex(0x252A30), 8);
     lv_obj_add_flag(runtime->objects.history_rows[index], LV_OBJ_FLAG_HIDDEN);
@@ -767,7 +776,8 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     lv_label_set_text(runtime_->objects.target_caption, "DURATION");
     lv_label_set_text(runtime_->objects.target_value, duration);
     lv_label_set_text(runtime_->objects.actual_caption, "UPLOAD");
-    lv_label_set_text(runtime_->objects.actual_value, "OK");
+    lv_label_set_text(runtime_->objects.actual_value,
+                      detail == nullptr ? "--" : compact_upload_state(detail->upload_status));
     lv_label_set_text(runtime_->objects.sensors, summary_line);
     lv_label_set_text(runtime_->objects.timing, "");
     lv_label_set_text(runtime_->objects.terrain, terrain_summary);
@@ -803,7 +813,8 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     lv_label_set_text(runtime_->objects.target_caption, "DURATION");
     lv_label_set_text(runtime_->objects.target_value, duration);
     lv_label_set_text(runtime_->objects.actual_caption, "UPLOAD");
-    lv_label_set_text(runtime_->objects.actual_value, "OK");
+    lv_label_set_text(runtime_->objects.actual_value,
+                      compact_upload_state(snapshot.completion_upload_status));
     lv_label_set_text(runtime_->objects.sensors, summary_line);
     lv_label_set_text(runtime_->objects.timing, "");
     lv_label_set_text(runtime_->objects.terrain, terrain_summary);
