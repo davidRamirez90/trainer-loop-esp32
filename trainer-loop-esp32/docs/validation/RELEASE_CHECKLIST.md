@@ -504,3 +504,12 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [ ] Physically confirm the new sync labels and corrected status labels,
   pairing touch targets, control acknowledgement, pause/stop safety, and
   endurance behavior.
+
+## Camera spot-check — 2026-09-18
+
+- [x] Latest screen shows the compact connection line, workout context, four
+  distinct Home tiles, and one `START` action inside the bezel without obvious
+  clipping.
+- [x] Text is readable enough for layout review; touch accuracy,
+  disconnect-state transitions, control acknowledgement, and safety remain
+  hands-on gates.

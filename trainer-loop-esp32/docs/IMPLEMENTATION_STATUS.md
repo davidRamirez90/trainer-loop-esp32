@@ -327,3 +327,8 @@ app `af53660`, the expected project partition table, LittleFS/LVGL readiness,
 automatic Wi-Fi recovery, three Intervals HTTP 200 responses, BLE/GATT setup,
 and no panic/watchdog output. Physical display readability/touch and trainer/HR
 safety gates remain open.
+
+The follow-up camera spot-check showed the compact connection line, the
+workout context, four distinct Home tiles, and one `START` action inside the
+bezel without obvious clipping. Text was readable enough for layout review;
+touch accuracy and disconnect-state transitions still require hands-on use.

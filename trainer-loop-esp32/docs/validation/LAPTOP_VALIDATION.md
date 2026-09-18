@@ -389,6 +389,14 @@ setup with no panic/watchdog output.
   two-line pairing rows; direct touch, control safety, and endurance remain
   open.
 
+## Camera spot-check — 2026-09-18
+
+- [x] The latest physical screen shows the compact connection line, workout
+  context, four distinct Home tiles, and one `START` action inside the bezel
+  without obvious clipping.
+- [x] Text is readable enough for layout review; hands-on touch accuracy and
+  disconnect-state transitions remain unverified.
+
 ## Latest application-only validation — 2026-09-18
 
 - [x] Every `main/*.cpp` translation unit passes Clang `-Werror` in the
