@@ -132,6 +132,8 @@ void FirmwareApp::on_provisioning_stopped() {
     ESP_LOGE("trainer_app", "BLE could not start after setup: %s", ble_status.error->message.c_str());
     return;
   }
+  sync_retry_.request(monotonic_ms());
+  ESP_LOGI("trainer_app", "automatic workout sync retry armed after setup");
   start_runtime_task();
 #endif
 }
@@ -346,6 +348,43 @@ void FirmwareApp::present_runtime_ui(std::uint64_t now_ms) {
                            presented.error->message.c_str());
 }
 
+Status FirmwareApp::retry_connection_and_sync(std::uint64_t now_ms) {
+  ui_busy_ = true;
+  ui_message_ = "Retrying connection and sync";
+  // Retry performs bounded network and time-sync waits on this task. Paint
+  // the progress state before entering them so the touch UI never looks
+  // like it reverted to its startup screen or stopped responding.
+  present_runtime_ui(now_ms);
+
+  Status status = Status::ok();
+  if (!wifi_.connected()) {
+    status = wifi_.connect(settings_.current().secrets.wifi_ssid,
+                           settings_.current().secrets.wifi_password);
+    if (status) status = wifi_.wait_for_connection(10000U);
+  }
+  if (status) status = time_sync_.synchronize(&time_, 10000U);
+  if (status) {
+    const auto sync = sync_today_and_persist();
+    if (!sync) status = Status::failure(sync.error->code, sync.error->message);
+    else if (sync.value->state == SyncState::kAuthBlocked) {
+      status = Status::failure(ErrorCode::kAuthentication,
+                               "Intervals credentials rejected; cached workouts kept");
+    } else {
+      ui_message_ = sync.value->state == SyncState::kEmpty
+          ? "No supported workout scheduled today. Cached workouts kept."
+          : "Workout sync complete";
+      load_cached_workout_if_available(true);
+    }
+  }
+  if (upload_queue_ready_) {
+    const Status retry = upload_queue_.retry_failed(now_ms);
+    if (status && !retry) status = retry;
+  }
+  next_upload_attempt_ms_ = 0;
+  ui_busy_ = false;
+  return status;
+}
+
 void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now_ms) {
   Status status = Status::ok();
   const RideState ride_state = coordinator_.snapshot().state;
@@ -391,34 +430,11 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       }
       break;
     case UiCommandType::kRetry: {
-      ui_busy_ = true;
-      ui_message_ = "Retrying connection and sync";
-      // Retry performs bounded network and time-sync waits on this task. Paint
-      // the progress state before entering them so the touch UI never looks
-      // like it reverted to its startup screen or stopped responding.
-      present_runtime_ui(now_ms);
-      if (!wifi_.connected()) {
-        status = wifi_.connect(settings_.current().secrets.wifi_ssid, settings_.current().secrets.wifi_password);
-        if (status) status = wifi_.wait_for_connection(10000U);
-      }
-      if (status) status = time_sync_.synchronize(&time_, 10000U);
-      if (status) {
-        const auto sync = sync_today_and_persist();
-        if (!sync) status = Status::failure(sync.error->code, sync.error->message);
-        else if (sync.value->state == SyncState::kAuthBlocked)
-          status = Status::failure(ErrorCode::kAuthentication, "Intervals credentials rejected; cached workouts kept");
-        else {
-          ui_message_ = sync.value->state == SyncState::kEmpty
-              ? "No supported workout scheduled today. Cached workouts kept." : "Workout sync complete";
-          load_cached_workout_if_available(true);
-        }
-      }
-      if (upload_queue_ready_) {
-        const Status retry = upload_queue_.retry_failed(now_ms);
-        if (status && !retry) status = retry;
-      }
-      next_upload_attempt_ms_ = 0;
-      ui_busy_ = false;
+      sync_retry_.request(now_ms);
+      if (!sync_retry_.due(now_ms, false, ui_busy_)) break;
+      sync_retry_.begin();
+      status = retry_connection_and_sync(now_ms);
+      sync_retry_.finish(now_ms, static_cast<bool>(status));
       break;
     }
     case UiCommandType::kOpenDevices:
@@ -676,6 +692,19 @@ void FirmwareApp::runtime_loop() {
     while (const auto command = display_.pop_command()) {
       process_ui_command(*command, monotonic_ms());
     }
+    const RideState state_before_auto_retry = coordinator_.snapshot().state;
+    if (sync_retry_.due(now_ms, session_is_active(state_before_auto_retry), ui_busy_)) {
+      ESP_LOGI("trainer_app", "automatic workout sync retry starting (failure=%u)",
+               static_cast<unsigned>(sync_retry_.failures()));
+      sync_retry_.begin();
+      const Status retry = retry_connection_and_sync(now_ms);
+      sync_retry_.finish(now_ms, static_cast<bool>(retry));
+      if (!retry) {
+        ui_message_ = retry.error->message;
+        ESP_LOGW("trainer_app", "automatic workout sync retry failed: %s",
+                 retry.error->message.c_str());
+      }
+    }
     const Status tick = coordinator_.tick(monotonic_ms(), sensors_);
     if (!tick) ESP_LOGW("trainer_app", "session tick fault: %s", tick.error->message.c_str());
     if (coordinator_.snapshot().state == RideState::kComplete && !artifacts_finalized_) {
@@ -692,6 +721,7 @@ void FirmwareApp::runtime_loop() {
 #endif
 
 void FirmwareApp::start() {
+  bool startup_sync_succeeded = false;
   const Status nvs_status = nvs_.initialize();
 #ifdef ESP_PLATFORM
   if (!nvs_status) {
@@ -840,7 +870,11 @@ void FirmwareApp::start() {
         ESP_LOGW("trainer_app", "SNTP refresh deferred: %s", synchronized.error->message.c_str());
       } else {
         const auto sync = sync_today_and_persist();
-        if (!sync) ESP_LOGW("trainer_app", "today workout sync deferred: %s", sync.error->message.c_str());
+        if (!sync) {
+          ESP_LOGW("trainer_app", "today workout sync deferred: %s", sync.error->message.c_str());
+        } else {
+          startup_sync_succeeded = true;
+        }
       }
     } else {
       ESP_LOGW("trainer_app", "Wi-Fi association timed out; cached/offline mode remains available");
@@ -867,6 +901,10 @@ void FirmwareApp::start() {
     return;
   }
   start_runtime_task();
+  if (!startup_sync_succeeded) {
+    sync_retry_.request(monotonic_ms());
+    ESP_LOGI("trainer_app", "automatic workout sync retry armed after startup");
+  }
 #else
   (void)storage_status;
 #endif

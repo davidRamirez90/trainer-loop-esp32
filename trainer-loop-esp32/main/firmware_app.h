@@ -3,6 +3,7 @@
 #include "board_v1.h"
 #include "ble_nimble.h"
 #include "trainer_loop/fit_store.h"
+#include "trainer_loop/retry_policy.h"
 #include "trainer_loop/history.h"
 #include "intervals_http.h"
 #include "intervals_sync.h"
@@ -41,6 +42,7 @@ class FirmwareApp {
   void process_ui_command(const UiCommand& command, std::uint64_t now_ms);
   UiSnapshot make_runtime_ui_snapshot(std::uint64_t now_ms) const;
   void present_runtime_ui(std::uint64_t now_ms);
+  Status retry_connection_and_sync(std::uint64_t now_ms);
   void load_cached_workout_if_available(bool refresh = false);
   Result<SyncMetadata> sync_today_and_persist();
   Status publish_session_artifacts(const JournalManifest& manifest, const Workout& workout,
@@ -87,6 +89,7 @@ class FirmwareApp {
   bool fit_store_ready_ = false;
   bool upload_queue_ready_ = false;
   std::uint64_t next_upload_attempt_ms_ = 0U;
+  RetryPolicy sync_retry_;
   WifiStation wifi_;
 #ifdef ESP_PLATFORM
   static void runtime_task_entry(void* argument);

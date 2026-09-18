@@ -10,6 +10,7 @@
 #include "trainer_loop/journal.h"
 #include "trainer_loop/physics.h"
 #include "trainer_loop/recorder.h"
+#include "trainer_loop/retry_policy.h"
 #include "trainer_loop/settings.h"
 #include "trainer_loop/setup.h"
 #include "trainer_loop/sync.h"
@@ -552,6 +553,26 @@ int main() {
   assert(!coordinator.snapshot().complete);
   const auto second_ride = coordinator_journal.read_session(coordinator.session_uuid());
   assert(second_ride && second_ride.value->manifest.destination_athlete_id == "second-athlete");
+
+  trainer_loop::RetryPolicy retry_policy;
+  retry_policy.request(1000U);
+  assert(retry_policy.pending());
+  assert(!retry_policy.due(999U, false, false));
+  assert(retry_policy.due(1000U, false, false));
+  assert(!retry_policy.due(1000U, true, false));
+  retry_policy.begin();
+  retry_policy.finish(1000U, false);
+  assert(retry_policy.pending());
+  assert(!retry_policy.due(30999U, false, false));
+  assert(retry_policy.due(31000U, false, false));
+  retry_policy.begin();
+  retry_policy.finish(31000U, false);
+  assert(!retry_policy.due(150999U, false, false));
+  assert(retry_policy.due(151000U, false, false));
+  retry_policy.begin();
+  retry_policy.finish(151000U, true);
+  assert(!retry_policy.pending());
+
   std::filesystem::remove_all(root);
 
   std::cout << "trainer_core_tests: smoke checks passed\n";

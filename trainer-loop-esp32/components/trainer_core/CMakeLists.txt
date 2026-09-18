@@ -12,6 +12,7 @@ idf_component_register(
     "src/journal.cpp"
     "src/physics.cpp"
     "src/recorder.cpp"
+    "src/retry_policy.cpp"
     "src/settings.cpp"
     "src/summary.cpp"
     "src/sync.cpp"

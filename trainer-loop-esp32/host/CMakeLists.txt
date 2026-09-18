@@ -13,6 +13,7 @@ add_library(trainer_core STATIC
   ${CMAKE_CURRENT_LIST_DIR}/../components/trainer_core/src/journal.cpp
   ${CMAKE_CURRENT_LIST_DIR}/../components/trainer_core/src/physics.cpp
   ${CMAKE_CURRENT_LIST_DIR}/../components/trainer_core/src/recorder.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/../components/trainer_core/src/retry_policy.cpp
   ${CMAKE_CURRENT_LIST_DIR}/../components/trainer_core/src/settings.cpp
   ${CMAKE_CURRENT_LIST_DIR}/../components/trainer_core/src/summary.cpp
   ${CMAKE_CURRENT_LIST_DIR}/../components/trainer_core/src/sync.cpp
