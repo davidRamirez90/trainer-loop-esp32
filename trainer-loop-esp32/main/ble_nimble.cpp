@@ -488,8 +488,14 @@ bool needs_descriptor(const NimbleRuntimeLink* link, const CharacteristicInfo& c
 }
 
 void start_descriptor_discovery(NimbleRuntimeLink* link) {
-  calculate_descriptor_end_handles(link);
-  link->next_descriptor = 0U;
+  // The completion callback re-enters this function for the next
+  // characteristic.  Preserve the cursor across those callbacks; resetting it
+  // here causes the first notify characteristic to be discovered forever and
+  // prevents the link from reaching its subscription/ready state.
+  if (link->discovery != DiscoveryStage::kDescriptors) {
+    calculate_descriptor_end_handles(link);
+    link->next_descriptor = 0U;
+  }
   while (link->next_descriptor < link->characteristic_count) {
     CharacteristicInfo& characteristic = link->characteristics[link->next_descriptor++];
     if (!needs_descriptor(link, characteristic)) continue;
@@ -931,7 +937,11 @@ Status NimbleCentral::start_foreground_scan(std::uint64_t now_ms) {
     return Status::failure(ErrorCode::kTransport, "could not determine BLE identity address type");
   }
   ble_gap_disc_params parameters{};
-  parameters.passive = 1U;
+  // Some FTMS trainers publish their service UUID in the scan response rather
+  // than the primary advertisement.  Active scanning requests that response;
+  // role selection still requires the advertised FTMS/HRS UUID and exact
+  // address/type, so this does not enable name-only auto-selection.
+  parameters.passive = 0U;
   parameters.filter_duplicates = 1U;
   const int result = ble_gap_disc(own_addr_type, static_cast<std::int32_t>(kScanDurationMs),
                                   &parameters, scan_callback, runtime_.get());
