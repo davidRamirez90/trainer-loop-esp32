@@ -212,3 +212,8 @@ automatic Wi-Fi recovery, BLE/GATT startup and no panic/watchdog output; no
 concurrent-connect deferral appeared during the observed startup window. The
 known PCF85063 oscillator-stop warning and all supervised physical pairing,
 acknowledgement, safety, and endurance gates remain open.
+
+A live camera spot-check of the flashed image shows the compact connection line
+and four Home action tiles inside the display bezel with no obvious clipping.
+This is visual evidence only; direct touch targets, readability under intended
+lighting, and the pairing/reconnect workflow still require hands-on acceptance.

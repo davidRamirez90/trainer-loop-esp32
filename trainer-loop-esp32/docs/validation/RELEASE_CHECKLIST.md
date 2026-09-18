@@ -363,6 +363,8 @@ history upload retry. Existing hardware ride and upload evidence remains
   BLE/GATT startup with no panic/watchdog output. The serialized reconnect
   path showed no concurrent-connect deferral during the observed startup
   window. App size is `0x221b10`, with `0x1de4f0` free (47%).
+- [x] A live camera spot-check showed the compact connection line and four Home
+  action tiles inside the display bezel without obvious clipping.
 - [ ] Physical acceptance remains open for scan/reconnect behavior, trainer
   and HR pairing by explicit address/type, control acknowledgements, pause and
   stop safety, cache replacement using the real account, touch/readability,
