@@ -551,6 +551,12 @@ int main() {
 
   const auto ui = trainer_loop::make_ui_snapshot(coordinator.snapshot(), nullptr);
   assert(ui.safety_message.find("Power stale") != std::string::npos);
+  const auto first_workout = trainer_loop::next_today_workout({0U, 3U});
+  assert(first_workout.index == 1U && first_workout.count == 3U);
+  const auto wrapped_workout = trainer_loop::next_today_workout({2U, 3U});
+  assert(wrapped_workout.index == 0U && wrapped_workout.count == 3U);
+  const auto empty_workout = trainer_loop::next_today_workout({4U, 0U});
+  assert(empty_workout.index == 0U && empty_workout.count == 0U);
   assert(coordinator.end_and_save(10000U));
   assert(coordinator.snapshot().state == trainer_loop::RideState::kComplete);
   assert(coordinator.snapshot().complete == false);

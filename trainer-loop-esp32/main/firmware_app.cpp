@@ -270,21 +270,36 @@ void FirmwareApp::load_cached_workout_if_available(bool refresh) {
       time_.snapshot().utc_ms, settings_.current().profile.timezone_rule);
   if (local_date.empty()) return;
   std::vector<CachedWorkout> cached = workout_cache_.list_for_date(local_date);
-  if (cached.empty()) return;
-  // The current display exposes one startable preview. Cache all events, and
-  // choose the stable first entry until the richer P1 event picker is added;
-  // never fabricate a workout or silently select by RSSI/device name.
-  active_cached_workout_ = std::move(cached.front());
-  const Status selected = coordinator_.select_workout(
-      active_cached_workout_->workout, settings_.current().profile, true);
+  if (cached.empty()) {
+    cached_workouts_.clear();
+    active_cached_workout_.reset();
+    active_cached_workout_index_ = 0U;
+    return;
+  }
+  cached_workouts_ = std::move(cached);
+  active_cached_workout_index_ = 0U;
+  const Status selected = select_cached_workout(active_cached_workout_index_);
   if (!selected) {
     ESP_LOGW("trainer_app", "cached workout could not enter preview: %s",
              selected.error->message.c_str());
-    active_cached_workout_.reset();
-  } else if (cached.size() > 1U) {
-    ESP_LOGW("trainer_app", "%u cached workouts available; previewing the first",
-             static_cast<unsigned>(cached.size()));
+  } else if (cached_workouts_.size() > 1U) {
+    ui_message_ = "Multiple workouts found — use NEXT";
+    ESP_LOGI("trainer_app", "%u cached workouts available; previewing 1 of %u",
+             static_cast<unsigned>(cached_workouts_.size()),
+             static_cast<unsigned>(cached_workouts_.size()));
   }
+}
+
+Status FirmwareApp::select_cached_workout(std::size_t index) {
+  if (index >= cached_workouts_.size()) {
+    return Status::failure(ErrorCode::kBounds, "cached workout selection is out of range");
+  }
+  active_cached_workout_index_ = index;
+  active_cached_workout_ = cached_workouts_[index];
+  const Status selected = coordinator_.select_workout(
+      active_cached_workout_->workout, settings_.current().profile, true);
+  if (!selected) active_cached_workout_.reset();
+  return selected;
 }
 
 UiSnapshot FirmwareApp::make_runtime_ui_snapshot(std::uint64_t now_ms) const {
@@ -292,6 +307,12 @@ UiSnapshot FirmwareApp::make_runtime_ui_snapshot(std::uint64_t now_ms) const {
   ui.busy = ui_busy_;
   ui.profile = settings_.current().profile;
   ui.wifi_status = wifi_.connected() ? "Wi-Fi connected" : "Wi-Fi offline";
+  if (!cached_workouts_.empty()) {
+    ui.today_workout_index = std::min(active_cached_workout_index_, cached_workouts_.size() - 1U);
+    ui.today_workout_count = cached_workouts_.size();
+    ui.next_workout_available = cached_workouts_.size() > 1U &&
+                                !session_is_active(coordinator_.snapshot().state);
+  }
   ui.history_available = history_ready_ && !session_is_active(coordinator_.snapshot().state);
   if (!ui_message_.empty() && (ui_busy_ || !session_is_active(coordinator_.snapshot().state))) {
     ui.fault = ui_message_;
@@ -452,6 +473,20 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       profile_field_ = 0;
       ui_message_ = "Adjust values, then Save. Back cancels.";
       break;
+    case UiCommandType::kNextWorkout: {
+      if (cached_workouts_.size() < 2U) {
+        status = Status::failure(ErrorCode::kConflict, "No alternate workout is cached for today");
+        break;
+      }
+      const TodayWorkoutSelection next = next_today_workout(
+          {active_cached_workout_index_, cached_workouts_.size()});
+      status = select_cached_workout(next.index);
+      if (status) {
+        ui_message_ = "Workout " + std::to_string(next.index + 1U) + " of " +
+                      std::to_string(cached_workouts_.size()) + " selected";
+      }
+      break;
+    }
     case UiCommandType::kProfileNext:
       if (settings_active_) profile_field_ = (profile_field_ + 1U) % 5U;
       break;
@@ -469,8 +504,7 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       status = save_ui_profile(settings_, profile_draft_, ride_state,
           [this](const SettingsGeneration& value) { return nvs_.save(value); });
       if (status) {
-        if (active_cached_workout_) status = coordinator_.select_workout(
-            active_cached_workout_->workout, settings_.current().profile, true);
+        if (active_cached_workout_) status = select_cached_workout(active_cached_workout_index_);
         settings_active_ = false;
         ui_message_ = "Profile saved on device";
       }
@@ -581,6 +615,8 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
           break;
         }
         status = coordinator_.enter_ready();
+        cached_workouts_.clear();
+        active_cached_workout_index_ = 0U;
         active_cached_workout_.reset();
         capabilities_published_ = false;
         history_detail_active_ = false;

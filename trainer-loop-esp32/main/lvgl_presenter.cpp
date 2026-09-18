@@ -668,9 +668,17 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     char today[192];
     format_duration(duration, sizeof(duration), snapshot.workout_duration_ms);
     std::snprintf(ftp, sizeof(ftp), "%d W", snapshot.profile.ftp_watts);
-    std::snprintf(today, sizeof(today), "%s%s",
-                  snapshot.screen == UiScreen::kPreview ? "Preview  |  " : "Today  |  ",
-                  snapshot.workout_name.empty() ? "No workout selected" : snapshot.workout_name.c_str());
+    if (snapshot.today_workout_count > 1U) {
+      std::snprintf(today, sizeof(today), "%s%u/%u  |  %s",
+                    snapshot.screen == UiScreen::kPreview ? "Preview  " : "Today  ",
+                    static_cast<unsigned>(snapshot.today_workout_index + 1U),
+                    static_cast<unsigned>(snapshot.today_workout_count),
+                    snapshot.workout_name.empty() ? "No workout selected" : snapshot.workout_name.c_str());
+    } else {
+      std::snprintf(today, sizeof(today), "%s%s",
+                    snapshot.screen == UiScreen::kPreview ? "Preview  |  " : "Today  |  ",
+                    snapshot.workout_name.empty() ? "No workout selected" : snapshot.workout_name.c_str());
+    }
     lv_label_set_text(runtime_->objects.workout, today);
     lv_label_set_text(runtime_->objects.target_caption, "DURATION");
     lv_label_set_text(runtime_->objects.target_value,
@@ -682,6 +690,15 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
                   compact_link_state(snapshot.trainer_status),
                   compact_link_state(snapshot.heart_rate_status));
     lv_label_set_text(runtime_->objects.sensors, readiness);
+    if (snapshot.today_workout_count > 1U && snapshot.safety_message.empty() &&
+        (snapshot.fault.empty() || snapshot.fault == "Multiple workouts found — use NEXT" ||
+         snapshot.fault.find("selected") != std::string::npos)) {
+      char selection[64];
+      std::snprintf(selection, sizeof(selection), "Workout %u of %u • tap NEXT",
+                    static_cast<unsigned>(snapshot.today_workout_index + 1U),
+                    static_cast<unsigned>(snapshot.today_workout_count));
+      lv_label_set_text(runtime_->objects.safety, selection);
+    }
   }
   if (snapshot.screen == UiScreen::kPaused) {
     lv_label_set_text(runtime_->objects.status, "WORKOUT PAUSED");
@@ -912,6 +929,12 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
         ? UiCommandType::kEndAndSave : UiCommandType::kRetry;
     lv_label_set_text(runtime_->objects.history_button_label,
                       snapshot.screen == UiScreen::kPaused ? "END & SAVE" : "RETRY");
+    lv_obj_set_state(runtime_->objects.history_button, LV_STATE_DISABLED, snapshot.busy);
+  } else if ((snapshot.screen == UiScreen::kHome || snapshot.screen == UiScreen::kPreview) &&
+             snapshot.next_workout_available) {
+    lv_obj_remove_flag(runtime_->objects.history_button, LV_OBJ_FLAG_HIDDEN);
+    runtime_->history_context.command = UiCommandType::kNextWorkout;
+    lv_label_set_text(runtime_->objects.history_button_label, "NEXT");
     lv_obj_set_state(runtime_->objects.history_button, LV_STATE_DISABLED, snapshot.busy);
   }
   runtime_->screen = snapshot.screen;

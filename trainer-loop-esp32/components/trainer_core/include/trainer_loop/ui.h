@@ -41,6 +41,7 @@ enum class UiCommandType : std::uint8_t {
   kOpenHistory,
   kOpenHistoryEntry,
   kOpenSettings,
+  kNextWorkout,
   kRetry,
   kSelectDevice,
   kProfileNext,
@@ -52,6 +53,11 @@ enum class UiCommandType : std::uint8_t {
 struct UiCommand {
   UiCommandType type = UiCommandType::kBack;
   std::size_t index = 0U;
+};
+
+struct TodayWorkoutSelection {
+  std::size_t index = 0U;
+  std::size_t count = 0U;
 };
 
 class UiCommandQueue {
@@ -83,6 +89,8 @@ struct UiSnapshot {
   std::string fault;
   std::string safety_message;
   std::string completion_upload_status;
+  std::size_t today_workout_index = 0U;
+  std::size_t today_workout_count = 0U;
   std::uint32_t elapsed_active_ms = 0U;
   std::uint32_t elapsed_wall_ms = 0U;
   std::uint32_t workout_duration_ms = 0U;
@@ -108,6 +116,7 @@ struct UiSnapshot {
   bool start_available = false;
   bool devices_available = false;
   bool history_available = false;
+  bool next_workout_available = false;
   bool pairing_scan_active = false;
   bool busy = false;
   bool simulation_is_virtual = true;
@@ -117,6 +126,7 @@ bool session_is_active(RideState state);
 Status save_ui_profile(SettingsStore& store, ProfileSettings profile, RideState state,
                        const std::function<Status(const SettingsGeneration&)>& persist);
 Status adjust_ui_profile(ProfileSettings* profile, std::size_t field, int direction);
+TodayWorkoutSelection next_today_workout(TodayWorkoutSelection current);
 UiSnapshot make_ui_snapshot(const CoordinatorSnapshot& coordinator, const Workout* workout = nullptr);
 const char* ui_screen_name(UiScreen screen);
 

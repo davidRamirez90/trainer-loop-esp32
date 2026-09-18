@@ -44,6 +44,7 @@ class FirmwareApp {
   void present_runtime_ui(std::uint64_t now_ms);
   Status retry_connection_and_sync(std::uint64_t now_ms);
   void load_cached_workout_if_available(bool refresh = false);
+  Status select_cached_workout(std::size_t index);
   Result<SyncMetadata> sync_today_and_persist();
   Status publish_session_artifacts(const JournalManifest& manifest, const Workout& workout,
                                    std::vector<TelemetrySample> samples,
@@ -74,6 +75,8 @@ class FirmwareApp {
   UploadQueue upload_queue_{"/storage/upload-queue.db"};
   SessionCoordinator coordinator_{&ble_, &journal_};
   SensorSnapshot sensors_;
+  std::vector<CachedWorkout> cached_workouts_;
+  std::size_t active_cached_workout_index_ = 0U;
   std::optional<CachedWorkout> active_cached_workout_;
   bool capabilities_published_ = false;
   bool pairing_active_ = false;

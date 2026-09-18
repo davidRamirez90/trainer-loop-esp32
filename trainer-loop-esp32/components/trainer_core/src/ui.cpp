@@ -38,6 +38,13 @@ Status adjust_ui_profile(ProfileSettings* profile, std::size_t field, int direct
   return valid;
 }
 
+TodayWorkoutSelection next_today_workout(TodayWorkoutSelection current) {
+  if (current.count == 0U) return TodayWorkoutSelection{};
+  if (current.index >= current.count - 1U) current.index = 0U;
+  else ++current.index;
+  return current;
+}
+
 bool UiCommandQueue::push(UiCommand command) {
   if (size_ >= kCapacity) return false;
   commands_[tail_] = command;
