@@ -282,6 +282,70 @@ void FirmwareApp::load_cached_workout_if_available(bool refresh) {
   }
 }
 
+UiSnapshot FirmwareApp::make_runtime_ui_snapshot(std::uint64_t now_ms) const {
+  UiSnapshot ui = make_ui_snapshot(coordinator_.snapshot(), coordinator_.selected_workout());
+  ui.busy = ui_busy_;
+  ui.wifi_status = wifi_.connected() ? "Wi-Fi connected" : "Wi-Fi offline";
+  ui.history_available = history_ready_ && !session_is_active(coordinator_.snapshot().state);
+  if (!session_is_active(coordinator_.snapshot().state)) {
+    ui.fault = ui_message_;
+    if (coordinator_.selected_workout() == nullptr && ui_message_.empty())
+      ui.fault = "No cached workout for today. Connect Wi-Fi and tap Retry.";
+  }
+  if (settings_active_) {
+    ui.screen = UiScreen::kSettings;
+    ui.trainer_status = nvs_.encrypted_at_rest() ? "Settings" : "Development: unencrypted NVS";
+    ui.profile = profile_draft_;
+    ui.profile_field = profile_field_;
+  }
+  if (history_ready_) {
+    for (const SessionSummary& summary : history_.recent(4U)) {
+      UiHistoryEntry entry;
+      entry.summary = summary;
+      entry.upload_status = "Saved locally";
+      for (const UploadEntry& upload : upload_queue_.entries()) {
+        if (upload.session_uuid == summary.uuid) {
+          entry.upload_status = upload_state_name(upload.state);
+          break;
+        }
+      }
+      ui.history_entries.push_back(std::move(entry));
+    }
+  }
+  if (pairing_active_) {
+    ui.screen = UiScreen::kPairing;
+    ui.devices_available = false;
+    ui.history_available = false;
+    ui.pairing_scan_active = ble_.connection_manager().scanning();
+    for (std::size_t index = 0U; index < ble_.scan_result_count(); ++index) {
+      DeviceIdentity candidate;
+      if (ble_.scan_result(index, &candidate)) ui.device_candidates.push_back(std::move(candidate));
+    }
+  }
+  if (history_active_) {
+    ui.screen = UiScreen::kHistory;
+    ui.devices_available = false;
+    ui.history_available = false;
+    ui.device_candidates.clear();
+  }
+  if (ui.screen == UiScreen::kPreview) {
+    ui.start_available = time_.trusted() && capabilities_published_ &&
+                         connected_with_fresh_power(sensors_, now_ms) &&
+                         check_storage_capacity("/storage", session_reservation_bytes()).enough;
+    if (!time_.trusted()) ui.safety_message = "Clock needs trusted time before start";
+    else if (!capabilities_published_) ui.safety_message = "Trainer capabilities unavailable";
+    else if (!connected_with_fresh_power(sensors_, now_ms)) ui.safety_message = "Fresh trainer power required";
+    else if (!ui.start_available) ui.safety_message = "Recording storage reserve unavailable";
+  }
+  return ui;
+}
+
+void FirmwareApp::present_runtime_ui(std::uint64_t now_ms) {
+  const Status presented = display_.present(make_runtime_ui_snapshot(now_ms));
+  if (!presented) ESP_LOGW("trainer_app", "UI snapshot was not presented: %s",
+                           presented.error->message.c_str());
+}
+
 void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now_ms) {
   Status status = Status::ok();
   const RideState ride_state = coordinator_.snapshot().state;
@@ -327,7 +391,12 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       }
       break;
     case UiCommandType::kRetry: {
+      ui_busy_ = true;
       ui_message_ = "Retrying connection and sync";
+      // Retry performs bounded network and time-sync waits on this task. Paint
+      // the progress state before entering them so the touch UI never looks
+      // like it reverted to its startup screen or stopped responding.
+      present_runtime_ui(now_ms);
       if (!wifi_.connected()) {
         status = wifi_.connect(settings_.current().secrets.wifi_ssid, settings_.current().secrets.wifi_password);
         if (status) status = wifi_.wait_for_connection(10000U);
@@ -349,6 +418,7 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
         if (status && !retry) status = retry;
       }
       next_upload_attempt_ms_ = 0;
+      ui_busy_ = false;
       break;
     }
     case UiCommandType::kOpenDevices:
@@ -614,62 +684,7 @@ void FirmwareApp::runtime_loop() {
     }
     process_pending_upload(now_ms);
 
-    UiSnapshot ui = make_ui_snapshot(coordinator_.snapshot(), coordinator_.selected_workout());
-    ui.wifi_status = wifi_.connected() ? "Wi-Fi connected" : "Wi-Fi offline";
-    ui.history_available = history_ready_ && !session_is_active(coordinator_.snapshot().state);
-    if (!session_is_active(coordinator_.snapshot().state)) {
-      ui.fault = ui_message_;
-      if (coordinator_.selected_workout() == nullptr && ui_message_.empty())
-        ui.fault = "No cached workout for today. Connect Wi-Fi and tap Retry.";
-    }
-    if (settings_active_) {
-      ui.screen = UiScreen::kSettings;
-      ui.trainer_status = nvs_.encrypted_at_rest() ? "Settings" : "Development: unencrypted NVS";
-      ui.profile = profile_draft_;
-      ui.profile_field = profile_field_;
-    }
-    if (history_ready_) {
-      for (const SessionSummary& summary : history_.recent(4U)) {
-        UiHistoryEntry entry;
-        entry.summary = summary;
-        entry.upload_status = "Saved locally";
-        for (const UploadEntry& upload : upload_queue_.entries()) {
-          if (upload.session_uuid == summary.uuid) {
-            entry.upload_status = upload_state_name(upload.state);
-            break;
-          }
-        }
-        ui.history_entries.push_back(std::move(entry));
-      }
-    }
-    if (pairing_active_) {
-      ui.screen = UiScreen::kPairing;
-      ui.devices_available = false;
-      ui.history_available = false;
-      ui.pairing_scan_active = ble_.connection_manager().scanning();
-      for (std::size_t index = 0U; index < ble_.scan_result_count(); ++index) {
-        DeviceIdentity candidate;
-        if (ble_.scan_result(index, &candidate)) ui.device_candidates.push_back(std::move(candidate));
-      }
-    }
-    if (history_active_) {
-      ui.screen = UiScreen::kHistory;
-      ui.devices_available = false;
-      ui.history_available = false;
-      ui.device_candidates.clear();
-    }
-    if (ui.screen == UiScreen::kPreview) {
-      ui.start_available = time_.trusted() && capabilities_published_ &&
-                           connected_with_fresh_power(sensors_, now_ms) &&
-                           check_storage_capacity("/storage", session_reservation_bytes()).enough;
-      if (!time_.trusted()) ui.safety_message = "Clock needs trusted time before start";
-      else if (!capabilities_published_) ui.safety_message = "Trainer capabilities unavailable";
-      else if (!connected_with_fresh_power(sensors_, now_ms)) ui.safety_message = "Fresh trainer power required";
-      else if (!ui.start_available) ui.safety_message = "Recording storage reserve unavailable";
-    }
-    const Status presented = display_.present(ui);
-    if (!presented) ESP_LOGW("trainer_app", "UI snapshot was not presented: %s",
-                             presented.error->message.c_str());
+    present_runtime_ui(now_ms);
     vTaskDelay(pdMS_TO_TICKS(kRuntimePeriodMs));
   }
 }

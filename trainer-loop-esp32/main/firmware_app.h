@@ -39,6 +39,8 @@ class FirmwareApp {
   void runtime_loop();
   void consume_ble_notifications();
   void process_ui_command(const UiCommand& command, std::uint64_t now_ms);
+  UiSnapshot make_runtime_ui_snapshot(std::uint64_t now_ms) const;
+  void present_runtime_ui(std::uint64_t now_ms);
   void load_cached_workout_if_available(bool refresh = false);
   Result<SyncMetadata> sync_today_and_persist();
   Status publish_session_artifacts(const JournalManifest& manifest, const Workout& workout,
@@ -75,6 +77,7 @@ class FirmwareApp {
   bool pairing_active_ = false;
   bool history_active_ = false;
   bool settings_active_ = false;
+  bool ui_busy_ = false;
   ProfileSettings profile_draft_;
   std::size_t profile_field_ = 0U;
   std::string ui_message_;

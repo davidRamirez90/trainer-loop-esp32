@@ -349,8 +349,8 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
     lv_obj_center(runtime->objects.history_labels[index]);
   }
 
-  lv_label_set_text(runtime->objects.status, "Trainer disconnected  |  HR unavailable  |  Wi-Fi offline");
-  lv_label_set_text(runtime->objects.workout, "TrainerLoop  •  waiting for workout");
+  lv_label_set_text(runtime->objects.status, "Starting TrainerLoop  |  loading sensors");
+  lv_label_set_text(runtime->objects.workout, "Please wait while the device becomes ready");
   lv_label_set_text(runtime->objects.target_caption, "TARGET");
   lv_label_set_text(runtime->objects.target_value, "-- W");
   lv_label_set_text(runtime->objects.actual_caption, "ACTUAL");
@@ -358,9 +358,10 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
   lv_label_set_text(runtime->objects.sensors, "HR --     CAD --");
   lv_label_set_text(runtime->objects.timing, "00:00 active     00:00 elapsed");
   lv_label_set_text(runtime->objects.terrain, "--.- km/h     --.-% grade\n--.- km        +-- m virtual");
-  lv_label_set_text(runtime->objects.safety, "Display ready  •  physical V1 acceptance pending");
+  lv_label_set_text(runtime->objects.safety, "Starting connections and local storage...");
   lv_label_set_text(runtime->objects.action_label, "BACK");
   lv_label_set_text(runtime->objects.history_button_label, "HISTORY");
+  lv_obj_add_flag(runtime->objects.action, LV_OBJ_FLAG_HIDDEN);
   return true;
 }
 
@@ -658,7 +659,10 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     lv_label_set_text(runtime_->objects.timing, "");
     lv_label_set_text(runtime_->objects.terrain, "");
     lv_label_set_text(runtime_->objects.safety,
-                      snapshot.history_entries.empty() ? "No saved rides yet" : "Local summaries are retained offline");
+                      snapshot.fault.empty()
+                          ? (snapshot.history_entries.empty() ? "No saved rides yet"
+                                                               : "Local summaries are retained offline")
+                          : snapshot.fault.c_str());
     for (std::size_t index = 0U; index < snapshot.history_entries.size() && index < kHistoryRows; ++index) {
       const UiHistoryEntry& entry = snapshot.history_entries[index];
       char duration[16];
@@ -680,7 +684,7 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     lv_label_set_text(runtime_->objects.extra_labels[i], label);
     runtime_->extra_contexts[i].command = command;
     lv_obj_remove_flag(runtime_->objects.extra[i], LV_OBJ_FLAG_HIDDEN);
-    lv_obj_set_state(runtime_->objects.extra[i], LV_STATE_DISABLED, !enabled);
+    lv_obj_set_state(runtime_->objects.extra[i], LV_STATE_DISABLED, !enabled || snapshot.busy);
   };
   if (snapshot.screen == UiScreen::kHome || snapshot.screen == UiScreen::kPreview ||
       snapshot.screen == UiScreen::kSettings) {
@@ -711,26 +715,28 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     }
   }
   if (snapshot.screen == UiScreen::kError && snapshot.retry_available) {
-    set_action(runtime_, "RETRY SAVE", UiCommandType::kRetry, true);
+    set_action(runtime_, "RETRY SAVE", UiCommandType::kRetry, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kSettings) {
-    set_action(runtime_, "BACK / CANCEL", UiCommandType::kBack, true);
+    set_action(runtime_, "BACK / CANCEL", UiCommandType::kBack, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kPairing) {
     set_action(runtime_, snapshot.pairing_scan_active ? "STOP SCAN" : "BACK",
-               UiCommandType::kBack, true);
+               UiCommandType::kBack, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kActive && snapshot.pause_available) {
-    set_action(runtime_, "PAUSE", UiCommandType::kPause, true);
+    set_action(runtime_, "PAUSE", UiCommandType::kPause, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kPaused && snapshot.resume_available) {
-    set_action(runtime_, "RESUME", UiCommandType::kResume, true);
+    set_action(runtime_, "RESUME", UiCommandType::kResume, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kPreview && snapshot.start_available) {
-    set_action(runtime_, "START", UiCommandType::kStart, true);
+    set_action(runtime_, "START", UiCommandType::kStart, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kHistory) {
-    set_action(runtime_, "BACK", UiCommandType::kBack, true);
+    set_action(runtime_, "BACK", UiCommandType::kBack, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kCompletion) {
-    set_action(runtime_, "HOME", UiCommandType::kBack, true);
-  } else if (snapshot.screen == UiScreen::kHome && snapshot.devices_available) {
-    set_action(runtime_, "DEVICES", UiCommandType::kOpenDevices, true);
+    set_action(runtime_, "HOME", UiCommandType::kBack, !snapshot.busy);
+  } else if (snapshot.screen == UiScreen::kHome) {
+    // Home navigation lives in the four-tile grid. The old primary-action
+    // button duplicated DEVICES and made the screen look like two menus.
+    lv_obj_add_flag(runtime_->objects.action, LV_OBJ_FLAG_HIDDEN);
   } else if (snapshot.end_save_available) {
-    set_action(runtime_, "END & SAVE", UiCommandType::kEndAndSave, true);
+    set_action(runtime_, "END & SAVE", UiCommandType::kEndAndSave, !snapshot.busy);
   } else {
     set_action(runtime_, "BACK", UiCommandType::kBack, false);
   }
@@ -741,7 +747,7 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
         ? UiCommandType::kEndAndSave : UiCommandType::kRetry;
     lv_label_set_text(runtime_->objects.history_button_label,
                       snapshot.screen == UiScreen::kPaused ? "END & SAVE" : "RETRY");
-    lv_obj_set_state(runtime_->objects.history_button, LV_STATE_DISABLED, false);
+    lv_obj_set_state(runtime_->objects.history_button, LV_STATE_DISABLED, snapshot.busy);
   }
   runtime_->screen = snapshot.screen;
   xSemaphoreGive(runtime_->lock);

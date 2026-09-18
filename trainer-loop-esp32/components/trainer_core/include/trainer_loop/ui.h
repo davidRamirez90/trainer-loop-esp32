@@ -104,6 +104,7 @@ struct UiSnapshot {
   bool devices_available = false;
   bool history_available = false;
   bool pairing_scan_active = false;
+  bool busy = false;
   bool simulation_is_virtual = true;
 };
 
