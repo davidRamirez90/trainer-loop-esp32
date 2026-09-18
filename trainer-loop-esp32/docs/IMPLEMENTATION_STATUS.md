@@ -437,3 +437,32 @@ credential-bearing backup action was performed.
 That bounded trace also recorded one HTTP 200 response whose transport ended
 with incomplete data; the response was treated as a sync failure and the
 durable retry policy remained active. No panic or watchdog output appeared.
+
+## Intervals transport and BLE-memory follow-up — 2026-09-18
+
+The complete sanitized trace from checkpoint `6b832c2` distinguishes two
+failures. The first sync attempt hit a Wi-Fi association timeout (`reason=2`);
+the next attempt associated and acquired an IPv4 lease. The later Intervals
+request received HTTP status `200`, then logged `esp-aes: Failed to allocate
+memory`, an mbedTLS read error, and `HTTP_CLIENT: Incomplete chunked data
+received -1`. No HTTP `429` or `Retry-After` was present, so this trace does
+not support API throttling. The failure occurred while reading a chunked TLS
+body, before JSON/ZWO parsing; no panic or watchdog reset appeared. The raw
+body and credentials were not captured.
+
+Checkpoint `95c62b4` keeps a non-empty 2xx GET body for the existing JSON/ZWO
+validators when the transport reports `ESP_ERR_HTTP_INCOMPLETE_DATA`. Empty
+bodies and all POST responses remain strict, so a lost upload acknowledgement
+cannot become an upload success. Checkpoint `3a8f4b8` defers automatic sync
+while scanning or while a selected BLE link is connected but service discovery
+is incomplete; manual Retry remains immediate. Retry diagnostics now include
+the DMA-capable heap margin used by the TLS/AES path. Host smoke, CTest 2/2,
+strict Clang fallback syntax, and a clean ESP-IDF build pass.
+
+The unflashed `3a8f4b8` application is `0x2240d0` bytes with `0x1dbf30`
+free (46%); bootloader size is `0x5160`; SHA-256 is
+`f4e1273051d30f3954ff58700ed1a03f623aa40639918db67ee0976ff605d7e0`.
+The next hardware gate is an authorized application-only write at `0x20000`
+followed by one bounded serial capture of BLE settling, Wi-Fi sync, and the
+DMA/HTTP result. No bootloader, partition table, NVS, LittleFS, erase, or
+credential-bearing backup action is part of this checkpoint.

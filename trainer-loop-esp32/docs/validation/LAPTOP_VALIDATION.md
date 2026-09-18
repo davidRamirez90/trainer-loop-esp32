@@ -537,3 +537,24 @@ setup with no panic/watchdog output.
   readability, trainer/HR control acknowledgements, stop safety, reconnect,
   and endurance. The camera spot-check was inconclusive because the device
   was not in the current camera frame.
+
+## Intervals transport and BLE-memory follow-up — 2026-09-18
+
+- [x] The captured deferred-start trace separates a Wi-Fi association timeout
+  from the later HTTP failure. The failing response had HTTP `200` followed by
+  `esp-aes: Failed to allocate memory`, an mbedTLS read error, and incomplete
+  chunked data; no HTTP `429` or `Retry-After` appeared.
+- [x] Checkpoint `95c62b4` preserves non-empty 2xx GET bodies for downstream
+  JSON/ZWO validation when the transport reports incomplete data. Empty GET
+  bodies and POST responses remain strict.
+- [x] Checkpoint `3a8f4b8` defers automatic sync during BLE scanning or selected
+  link service discovery, while manual Retry remains immediate. Portable tests
+  cover the gate; DMA-capable heap margins are now logged without credentials
+  or response bodies.
+- [x] `env -u IDF_PATH make test`, Debug CTest 2/2, strict Clang `-Werror`
+  fallback syntax, and clean ESP-IDF build pass.
+- [x] Unflashed app `3a8f4b8`: `0x2240d0` bytes, `0x1dbf30` free (46%),
+  bootloader `0x5160`, SHA-256
+  `f4e1273051d30f3954ff58700ed1a03f623aa40639918db67ee0976ff605d7e0`.
+- [ ] Enter download mode and perform the separately authorized app-only write
+  at `0x20000`, then capture one bounded boot/sync window for the new evidence.

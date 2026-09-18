@@ -630,3 +630,17 @@ history upload retry. Existing hardware ride and upload evidence remains
   ended with incomplete transport data and was retained as a sync failure for
   automatic retry.
 - [ ] Visually confirm the faster Home/ready transition on the device.
+
+## Intervals transport and BLE-memory follow-up — 2026-09-18
+
+- [x] The sanitized hardware trace recorded HTTP `200` followed by an AES
+  allocation failure and incomplete chunked TLS data. No HTTP `429` or
+  `Retry-After` was observed, so throttling is not evidenced.
+- [x] Non-empty incomplete 2xx GET bodies are now passed to the existing
+  structural validators; POST upload acknowledgements remain strict.
+- [x] Automatic sync waits for BLE scan/service discovery to settle, and
+  manual Retry stays immediate. Host, CTest 2/2, strict fallback syntax, and
+  ESP-IDF build pass for `3a8f4b8`.
+- [ ] Flash and bounded-monitor `3a8f4b8` at application offset `0x20000`.
+- [ ] Confirm a successful today/profile/ZWO sync with trainer and HR links
+  available, then repeat the no-trainer retry path without a restart.
