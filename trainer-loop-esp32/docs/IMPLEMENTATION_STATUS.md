@@ -66,8 +66,8 @@ are prior board observations, not new hardware results from this phase.
   decisions remain release gates.
 
 `make test`, explicit Debug CMake build and CTest pass (2/2, including the
-external SDK validator). The final laptop-only `idf.py build` also passes: app
-`0x21fa90`, free `0x1e0570` (47%) in the current app partition; bootloader
+external SDK validator). The latest `idf.py build` also passes: app
+`0x2207e0`, free `0x1df820` (47%) in the current app partition; bootloader
 `0x5160` with 36% free. No physical acceptance gate is closed by these results.
 Full evidence, limitations, changed-file groups and the exact home sequence:
 [Laptop validation](validation/LAPTOP_VALIDATION.md).
@@ -111,12 +111,16 @@ conflict as a retryable state instead of leaving the screen apparently locked.
 The completion and history detail views also distinguish uploaded, pending,
 retrying, blocked, and failed upload states using user-facing labels.
 
-Checkpoint `5f0d9cc` was built and flashed to the application slot only at
+The cache now keeps every supported workout returned for today. When more than
+one is available, Home/Preview shows an explicit `1/N` choice, offers a large
+NEXT button, and cycles the selection without changing the single-workout flow.
+
+Checkpoint `99c1e1d` was built and flashed to the application slot only at
 `0x20000` (SHA-256
-`05fe933e0008263eedebb7aa27148695f364ff050aa9ee1f17c1423e02a29e60`). A
-bounded monitor window confirmed app version `5f0d9cc`, the project partition
+`bc30b5a78cce9d32129b185038e82a84f36d54c4d4c68c313e0620976a273d42`). A
+bounded monitor window confirmed app version `99c1e1d`, the project partition
 table, LittleFS mount, LVGL readiness, Wi-Fi recovery, three Intervals HTTP 200
 responses, and no panic/watchdog. The remaining work is physical acceptance of
-the updated touch flow, exact trainer/HR pairing, safe ERG acknowledgements,
-ride completion/history navigation, and the release-gate endurance and
-reconnect tests in the checklist.
+the updated multiple-workout and touch flows, exact trainer/HR pairing, safe
+ERG acknowledgements, ride completion/history navigation, and the release-gate
+endurance and reconnect tests in the checklist.

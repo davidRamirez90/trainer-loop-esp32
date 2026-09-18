@@ -123,21 +123,30 @@ No production identity has been assigned or claimed.
 - No eFuses were burned and no irreversible secure-boot, encryption or debug
   lockdown configuration was enabled.
 
+## Application-only follow-up — 2026-09-18
+
+After the supervised ride feedback, the portable selector contract was extended
+test-first and the ESP image was rebuilt from checkpoint `99c1e1d`. `make test`
+and Debug CTest remain 2/2, including independent FIT decoding. The image is
+`0x2207e0` bytes with `0x1df820` free (47%); SHA-256 is
+`bc30b5a78cce9d32129b185038e82a84f36d54c4d4c68c313e0620976a273d42`.
+
+Only the application slot at `0x20000` was written. The monitor confirmed the
+new app version, the existing project partition table, LittleFS mount, LVGL
+startup, automatic Wi-Fi recovery, three Intervals HTTP 200 responses, and no
+panic/watchdog. No credential-bearing backup was made. Physical acceptance is
+still required for NEXT selection, the scan-conflict retry path, completion
+timer freeze, and clickable History details.
+
 ## Exact home testing sequence (deferred)
 
 1. **Do not re-provision.** Bring the existing board, exact Zwift Hub One and
    Garmin strap home. Record their firmware/model identities. Keep a rider able
    to stop pedaling immediately and use low workloads for all initial tests.
-2. The board still runs a previously flashed image. Testing the new UI requires
-   a **separately authorized firmware replacement**, but the recorded live
-   partition table is not currently compatible with the project table. First
-   perform only the authorized read-only partition check and preserve the old
-   image according to the approved backup plan. If the mismatch remains, stop
-   and explicitly decide whether NVS/storage data may be discarded before
-   choosing a full replacement procedure; do not assume `app-flash` is safe.
-   Never use `erase-flash`, change security settings, or re-provision as part
-   of this validation record. No flash operation is authorized by this laptop
-   validation record itself.
+2. The board now runs checkpoint `99c1e1d` from an application-only write at
+   `0x20000`; existing NVS and storage were left untouched, and no
+   credential-bearing backup was made. Never use `erase-flash`, change security
+   settings, or re-provision as part of this validation record.
 3. Boot normally. Confirm settings persist, V1 panel orientation/colors and four
    touch corners, no panic/watchdog, and adequate heap. Do not enter setup merely
    to repeat the previously successful Wi-Fi/SNTP/athlete HTTP-200 validation.
