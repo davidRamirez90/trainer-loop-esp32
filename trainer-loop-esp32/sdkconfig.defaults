@@ -30,6 +30,10 @@ CONFIG_FREERTOS_HZ=1000
 # record buffers on demand so the TLS handshake reserves only what it needs.
 CONFIG_MBEDTLS_DYNAMIC_BUFFER=y
 CONFIG_MBEDTLS_DYNAMIC_FREE_CONFIG_DATA=y
+# TLS contexts and record buffers use PSRAM so Wi-Fi retains internal packet
+# buffers while BLE links are active.
+# CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC is not set
+CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 CONFIG_MBEDTLS_DEBUG=y
 CONFIG_MBEDTLS_DEBUG_LEVEL=2
 # Intervals requests are small and the server accepts fragmented TLS records.
