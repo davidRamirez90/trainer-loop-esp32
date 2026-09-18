@@ -482,3 +482,25 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [ ] Physically confirm the corrected status labels and two-line pairing
   rows, then continue explicit pairing, control acknowledgement, pause/stop
   safety, and endurance gates.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Home reports the actual cloud-sync result separately from Wi-Fi link
+  state, including `Synced`, `No workout today`, `Sync failed`, `Auth blocked`,
+  and `Wi-Fi online`.
+- [x] Test-first coverage exercises all sync-state labels.
+- [x] `make test`, CTest 2/2, and strict Clang `-Werror` fallback syntax
+  validation pass.
+- [x] Clean ESP-IDF build produced app `af53660`, size `0x2230b0` bytes with
+  `0x1dcf50` free (47%); bootloader size is `0x5160`.
+- [x] Verified image SHA-256:
+  `8e582c9b7634fd973e3e23c181d4b65dfa19b2ef714adad7da015a1dc5da1ab2`.
+- [x] The image was flashed only to application offset `0x20000`. Bounded
+  monitor evidence confirmed the expected partition table, LittleFS/LVGL
+  readiness, Wi-Fi recovery, three Intervals HTTP 200 responses, BLE/GATT
+  setup, and no panic/watchdog output.
+- [x] No bootloader, partition table, NVS, LittleFS, erase, or
+  credential-bearing backup action was performed.
+- [ ] Physically confirm the new sync labels and corrected status labels,
+  pairing touch targets, control acknowledgement, pause/stop safety, and
+  endurance behavior.

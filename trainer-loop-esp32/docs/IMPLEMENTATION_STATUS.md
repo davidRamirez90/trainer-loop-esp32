@@ -314,3 +314,16 @@ readability/touch and trainer/HR safety gates remain open.
 A live camera spot-check after this write showed the active ride layout and
 large action controls inside the display bezel. The feed was too soft to prove
 small-text readability or touch accuracy, so those remain hands-on gates.
+
+Checkpoint `af53660` makes the Home cache line report the actual Intervals sync
+state instead of treating Wi-Fi association as a successful cloud sync. It
+distinguishes `Synced`, `No workout today`, `Sync failed`, `Auth blocked`, and
+`Wi-Fi online`, while preserving the offline cached state. The test-first
+portable contract covers every sync-state label. The clean ESP-IDF image is
+`0x2230b0` bytes with `0x1dcf50` bytes free (47%) and SHA-256
+`8e582c9b7634fd973e3e23c181d4b65dfa19b2ef714adad7da015a1dc5da1ab2`.
+Only application offset `0x20000` was written. The bounded monitor identified
+app `af53660`, the expected project partition table, LittleFS/LVGL readiness,
+automatic Wi-Fi recovery, three Intervals HTTP 200 responses, BLE/GATT setup,
+and no panic/watchdog output. Physical display readability/touch and trainer/HR
+safety gates remain open.

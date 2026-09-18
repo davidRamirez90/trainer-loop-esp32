@@ -368,6 +368,29 @@ setup with no panic/watchdog output.
 
 ## Latest application-only validation — 2026-09-18
 
+- [x] Home sync status now distinguishes actual sync outcome from Wi-Fi link
+  state: `Synced`, `No workout today`, `Sync failed`, `Auth blocked`, and
+  `Wi-Fi online`; offline cached mode remains explicit.
+- [x] Test-first coverage exercises every sync-state label.
+- [x] `env -u IDF_PATH make test`, CTest 2/2, and strict Clang `-Werror`
+  fallback syntax validation pass.
+- [x] Clean ESP-IDF build produced app `af53660`, size `0x2230b0` bytes with
+  `0x1dcf50` free (47%); bootloader size remains `0x5160`.
+- [x] Image SHA-256 is
+  `8e582c9b7634fd973e3e23c181d4b65dfa19b2ef714adad7da015a1dc5da1ab2`.
+- [x] The image was written only to application offset `0x20000`; esptool
+  verified the image hash and performed the normal post-write reset. No
+  bootloader, partition table, NVS, LittleFS, erase, or credential-bearing
+  backup action was performed.
+- [x] Bounded monitor evidence captured the expected partition table,
+  LittleFS/LVGL readiness, automatic Wi-Fi recovery, three Intervals HTTP 200
+  responses, BLE/GATT setup, and no panic/watchdog output.
+- [ ] Visually confirm the new sync labels, corrected disconnected status, and
+  two-line pairing rows; direct touch, control safety, and endurance remain
+  open.
+
+## Latest application-only validation — 2026-09-18
+
 - [x] Every `main/*.cpp` translation unit passes Clang `-Werror` in the
   non-ESP fallback build; ESP-only retry and startup-sync state is guarded.
 - [x] `env -u IDF_PATH make test` and CTest 2/2 pass after the warning fix.
