@@ -929,9 +929,13 @@ Status NimbleCentral::start_foreground_scan(std::uint64_t now_ms) {
   if (!runtime_->host_ready) return Status::failure(ErrorCode::kConflict, "NimBLE host is not ready");
   if (scan_active_) return Status::failure(ErrorCode::kConflict, "BLE scan is already active");
   for (const PeripheralRole role : {PeripheralRole::kTrainer, PeripheralRole::kHeartRate}) {
-    if (link_for(runtime_.get(), role).connecting) {
+    const NimbleRuntimeLink& link = link_for(runtime_.get(), role);
+    const bool gatt_setup_active = link.discovery != DiscoveryStage::kIdle &&
+                                   link.discovery != DiscoveryStage::kReady &&
+                                   link.discovery != DiscoveryStage::kFailed;
+    if (link.connecting || gatt_setup_active || link.control_gate.pending()) {
       return Status::failure(ErrorCode::kConflict,
-                             "BLE scan is waiting for a connection attempt to finish");
+                             "BLE scan is waiting for device setup to finish");
     }
   }
   const Status manager_status = connections_.scan_started(now_ms);
