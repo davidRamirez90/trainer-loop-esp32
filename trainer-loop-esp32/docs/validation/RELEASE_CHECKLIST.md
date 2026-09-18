@@ -663,3 +663,21 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [ ] Flash and verify `f05d994` at application offset `0x20000`.
 - [ ] Confirm complete profile/events/ZWO responses and no AES allocation
   failure with both BLE links available.
+
+## NimBLE PSRAM hardware validation — 2026-09-18
+
+- [x] `f05d994` was written only at application offset `0x20000` after manual
+  ROM download-mode entry; esptool verified the image hash.
+- [x] With the normal BLE/Wi-Fi workload, the bounded post-power-cycle trace
+  showed DMA-capable largest blocks of 19,456 bytes at retry start and
+  14,336 bytes during later HTTPS requests.
+- [x] Three Intervals sync GETs completed with `ESP_OK` and HTTP `200`; the
+  retry task reached `after_sync` and `complete`.
+- [x] The upload POST completed with `ESP_OK` and HTTP `201`.
+- [x] No AES allocation failure, incomplete chunked body, panic, or watchdog
+  output was observed.
+- [x] No bootloader, partition table, NVS, LittleFS, erase, or
+  credential-bearing backup action was performed.
+- [ ] Complete physical validation of trainer/HR selection and acknowledgements,
+  pause/stop safety, reconnect behavior, touch/readability, and endurance
+  before treating resistance workouts as released.

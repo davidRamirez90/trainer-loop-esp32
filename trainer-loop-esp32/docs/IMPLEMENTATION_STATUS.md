@@ -507,3 +507,24 @@ separate transient-overlap guard. The clean image is `0x224130` bytes with
 Host smoke, CTest 2/2, strict fallback syntax, and ESP-IDF build pass. The
 image is not yet flashed; the next gate is one app-only write at `0x20000` and
 an attached power-cycle capture with trainer and HR links available.
+
+## NimBLE PSRAM hardware validation — 2026-09-18
+
+The `f05d994` application was written only at `0x20000` after manual ROM
+download-mode entry. The write completed with esptool hash verification; no
+bootloader, partition table, NVS, LittleFS, erase, or credential-bearing
+backup action was performed.
+
+The bounded post-power-cycle trace confirms the memory fix under the normal
+BLE/Wi-Fi workload. Automatic sync began after the startup grace period with
+DMA-capable largest blocks of 19,456 bytes, then 14,336 bytes during later
+requests. All three sync GETs completed with `ESP_OK` and HTTP `200`; the
+retry task reached both `after_sync` and `complete`. The upload POST completed
+with `ESP_OK` and HTTP `201`. There was no AES allocation failure, incomplete
+chunked body, panic, or watchdog output. This validates the Intervals
+transport path with BLE active on the device.
+
+The remaining hardware gates are functional rather than transport recovery:
+physical trainer/HR selection and acknowledgements, pause/stop safety,
+reconnect behavior, touch/readability, and endurance. A resistance workout
+should remain blocked until those gates are separately accepted.

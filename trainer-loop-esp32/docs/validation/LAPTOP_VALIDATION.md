@@ -587,3 +587,20 @@ setup with no panic/watchdog output.
   `62166f998d455288b703929fe81fd00f81bacb3df544db94a9a5f86e85f3b246`.
 - [ ] Flash `f05d994` at `0x20000` and capture complete HTTPS responses while
   BLE trainer/HR links are connected.
+
+## NimBLE PSRAM hardware validation — 2026-09-18
+
+- [x] Wrote the `f05d994` application only at `0x20000` after manual ROM
+  download-mode entry; esptool verified the image hash.
+- [x] Bounded post-power-cycle capture with the normal BLE/Wi-Fi workload
+  showed DMA-capable largest blocks of 19,456 bytes at retry start and
+  14,336 bytes during later HTTPS requests.
+- [x] All three Intervals sync GETs completed with `ESP_OK` and HTTP `200`;
+  the retry task reached `after_sync` and `complete`.
+- [x] The upload POST completed with `ESP_OK` and HTTP `201`.
+- [x] No AES allocation failure, incomplete chunked body, panic, or watchdog
+  output appeared in the capture.
+- [x] No bootloader, partition table, NVS, LittleFS, erase, or
+  credential-bearing backup action was performed.
+- [ ] Validate physical trainer/HR selection and acknowledgements, pause/stop
+  safety, reconnect behavior, touch/readability, and endurance.
