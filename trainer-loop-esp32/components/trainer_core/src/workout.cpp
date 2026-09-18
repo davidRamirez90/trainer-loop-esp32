@@ -233,7 +233,8 @@ bool is_known_container(const std::string& name) {
 
 bool is_metadata_tag(const std::string& name) {
   return name == "author" || name == "name" || name == "description" || name == "sporttype" ||
-         name == "tags" || name == "time" || name == "tss" || name == "if" || name == "np";
+         name == "tags" || name == "time" || name == "tss" || name == "if" || name == "np" ||
+         name == "textevent";
 }
 
 void add_warning(Workout* workout, const std::string& warning) {
@@ -294,9 +295,28 @@ Result<WorkoutSegment> parse_basic_segment(const Tag& tag, std::size_t offset) {
 
 Result<WorkoutSegment> parse_steady_state(const Tag& tag, std::size_t offset) {
   const auto duration = duration_ms(tag, offset);
-  const auto power = number(tag, "power", true, offset);
-  if (!duration || !power) return Result<WorkoutSegment>::failure(ErrorCode::kMalformedInput, "SteadyState is invalid", offset);
-  if (*power.value < 0.0 || *power.value > 10.0) {
+  const bool has_power = attribute(tag, "power").has_value();
+  const bool has_low = attribute(tag, "powerlow").has_value();
+  const bool has_high = attribute(tag, "powerhigh").has_value();
+  if (!duration || (has_power == (has_low || has_high))) {
+    return Result<WorkoutSegment>::failure(ErrorCode::kMalformedInput, "SteadyState is invalid", offset);
+  }
+  double low = 0.0;
+  double high = 0.0;
+  if (has_power) {
+    const auto power = number(tag, "power", true, offset);
+    if (!power) return Result<WorkoutSegment>::failure(ErrorCode::kMalformedInput, "SteadyState is invalid", offset);
+    low = high = *power.value;
+  } else {
+    const auto low_value = number(tag, "powerlow", true, offset);
+    const auto high_value = number(tag, "powerhigh", true, offset);
+    if (!low_value || !high_value) {
+      return Result<WorkoutSegment>::failure(ErrorCode::kMalformedInput, "SteadyState is invalid", offset);
+    }
+    low = *low_value.value;
+    high = *high_value.value;
+  }
+  if (low < 0.0 || high < low || high > 10.0) {
     return Result<WorkoutSegment>::failure(ErrorCode::kBounds, "SteadyState power is outside bounds", offset);
   }
   const auto cadence_value = cadence(tag, offset);
@@ -305,10 +325,10 @@ Result<WorkoutSegment> parse_steady_state(const Tag& tag, std::size_t offset) {
   segment.duration_ms = *duration.value;
   segment.kind = SegmentKind::kStep;
   segment.power_origin = PowerOrigin::kFractionFtp;
-  segment.start_low = *power.value;
-  segment.start_high = *power.value;
-  segment.end_low = *power.value;
-  segment.end_high = *power.value;
+  segment.start_low = low;
+  segment.start_high = high;
+  segment.end_low = low;
+  segment.end_high = high;
   segment.phase = "Workout";
   segment.name = "Steady state";
   if (cadence_value.value->high_rpm > 0.0) segment.cadence = *cadence_value.value;

@@ -17,7 +17,8 @@ std::string lower(std::string value) {
 bool cycling_sport(const std::string& sport) {
   const std::string normalized = lower(sport);
   return normalized.empty() || normalized == "cycling" || normalized == "bike" || normalized == "ride" ||
-         normalized == "indoor_cycling" || normalized == "indoor cycling";
+         normalized == "indoor_cycling" || normalized == "indoor cycling" || normalized == "virtualride" ||
+         normalized == "virtual_ride" || normalized == "virtual ride";
 }
 
 bool safe_event_id(const std::string& value) {

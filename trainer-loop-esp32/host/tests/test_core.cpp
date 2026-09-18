@@ -267,6 +267,11 @@ int main() {
   assert(cooldown && cooldown.value->segments.front().kind == trainer_loop::SegmentKind::kRamp);
   assert(trainer_loop::resolved_target_range_at(*cooldown.value, 5000U, 250).low > 149.9 &&
          trainer_loop::resolved_target_range_at(*cooldown.value, 5000U, 250).low < 150.1);
+  const auto steady_range = trainer_loop::parse_zwo(
+      "<workout_file><workout><SteadyState Duration=\"480\" PowerLow=\"0.88\" PowerHigh=\"0.92\"><textevent message=\"1/3\" duration=\"10\"/></SteadyState></workout></workout_file>");
+  assert(steady_range && steady_range.value->segments.size() == 1U &&
+         trainer_loop::resolved_target_range_at(*steady_range.value, 0U, 250).low == 220.0 &&
+         trainer_loop::resolved_target_range_at(*steady_range.value, 0U, 250).high == 230.0);
   assert(!trainer_loop::parse_zwo("<workout_file><workout><FreeRide Duration=\"1\"/></workout></workout_file>"));
   assert(!trainer_loop::parse_zwo("<workout_file><workout><SteadyState Duration=\"1\" Power=\"nan\"/></workout></workout_file>"));
   assert(!trainer_loop::parse_zwo("<workout_file><workout><SteadyState Duration=\"0.0001\" Power=\"0.5\"/></workout></workout_file>"));
@@ -438,10 +443,13 @@ int main() {
 
   const auto filtered_events = trainer_loop::supported_today_events(
       std::vector<trainer_loop::RemoteWorkoutEvent>{{"a", "Ride", "2026-09-16", "cycling", true},
+                                                     {"virtual", "Virtual workout", "2026-09-16", "VirtualRide", true},
                                                      {"b", "Run", "2026-09-16", "running", true},
                                                      {"c", "Old", "2026-09-15", "cycling", true}},
       "2026-09-16");
-  assert(filtered_events && filtered_events.value->size() == 1U && filtered_events.value->front().event_id == "a");
+  assert(filtered_events && filtered_events.value->size() == 2U &&
+         filtered_events.value->front().event_id == "a" &&
+         filtered_events.value->back().event_id == "virtual");
   profile.ftp_local_override = true;
   const auto local_profile = trainer_loop::apply_remote_profile(profile, {{300}, {80.0}});
   assert(local_profile.ftp_watts == 250 && local_profile.rider_kg == 80.0);
