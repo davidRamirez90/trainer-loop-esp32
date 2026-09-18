@@ -14,6 +14,7 @@
 #include <dirent.h>
 #include <fstream>
 #include <iomanip>
+#include <optional>
 #include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -31,6 +32,43 @@ bool safe_component(const std::string& value) {
   for (const char character : value) {
     if (!((character >= 'A' && character <= 'Z') || (character >= 'a' && character <= 'z') ||
           (character >= '0' && character <= '9') || character == '-' || character == '_')) return false;
+  }
+  return true;
+}
+
+struct CacheFileSnapshot {
+  std::string event_id;
+  std::string bytes;
+};
+
+bool read_file_bytes(const std::string& path, std::string* bytes) {
+  if (bytes == nullptr) return false;
+  std::ifstream input(path, std::ios::binary);
+  if (!input) return false;
+  input.seekg(0, std::ios::end);
+  const std::streamoff size = input.tellg();
+  if (size < 0) return false;
+  input.seekg(0, std::ios::beg);
+  bytes->assign(static_cast<std::size_t>(size), '\0');
+  input.read(bytes->data(), static_cast<std::streamsize>(bytes->size()));
+  return static_cast<bool>(input) || bytes->empty();
+}
+
+// Rollback writes intentionally bypass the host short-write seam. The seam
+// models the failed replacement operation; restoration must exercise the
+// real filesystem path so the public replacement guarantee can be tested.
+bool restore_file_bytes(const std::string& path, const std::string& bytes) {
+  const std::string temporary = path + ".rollback.tmp";
+  std::FILE* output = std::fopen(temporary.c_str(), "wb");
+  if (output == nullptr) return false;
+  const bool written = bytes.empty() || std::fwrite(bytes.data(), 1U, bytes.size(), output) == bytes.size();
+  const bool flushed = std::fflush(output) == 0;
+  const int descriptor = ::fileno(output);
+  const bool synced = descriptor < 0 || ::fsync(descriptor) == 0;
+  const bool closed = std::fclose(output) == 0;
+  if (!written || !flushed || !synced || !closed || std::rename(temporary.c_str(), path.c_str()) != 0) {
+    (void)std::remove(temporary.c_str());
+    return false;
   }
   return true;
 }
@@ -309,15 +347,70 @@ Status WorkoutCache::replace_for_date(const std::string& local_date,
     keep.push_back(cached.event_id);
   }
 
+  // Snapshot every valid record for this date and every path that the new
+  // generation will overwrite. If a later write or prune fails, the previous
+  // valid set can be restored without depending on the failed write budget.
+  std::vector<CacheFileSnapshot> snapshots;
+  DIR* snapshot_handle = ::opendir(directory_.c_str());
+  if (snapshot_handle == nullptr) return Status::failure(ErrorCode::kStorage, "cannot inspect workout cache");
+  while (const dirent* entry = ::readdir(snapshot_handle)) {
+    const std::string filename(entry->d_name);
+    if (filename.size() <= 6U || filename.substr(filename.size() - 6U) != ".cache") continue;
+    const std::string event_id = filename.substr(0U, filename.size() - 6U);
+    const bool will_overwrite = std::find(keep.begin(), keep.end(), event_id) != keep.end();
+    const auto cached = load(event_id);
+    const bool belongs_to_date = cached && cached.value->local_date == local_date;
+    if (!will_overwrite && !belongs_to_date) continue;
+    if (std::find_if(snapshots.begin(), snapshots.end(), [&](const CacheFileSnapshot& snapshot) {
+          return snapshot.event_id == event_id;
+        }) != snapshots.end()) {
+      continue;
+    }
+    CacheFileSnapshot snapshot;
+    snapshot.event_id = event_id;
+    if (!read_file_bytes(path_for(event_id), &snapshot.bytes)) {
+      ::closedir(snapshot_handle);
+      return Status::failure(ErrorCode::kStorage, "cannot snapshot workout cache");
+    }
+    snapshots.push_back(std::move(snapshot));
+  }
+  ::closedir(snapshot_handle);
+
+  const auto rollback = [&]() {
+    bool restored = true;
+    for (const std::string& event_id : keep) {
+      const auto snapshot = std::find_if(snapshots.begin(), snapshots.end(),
+                                         [&](const CacheFileSnapshot& value) {
+                                           return value.event_id == event_id;
+                                         });
+      if (snapshot == snapshots.end() &&
+          ::remove(path_for(event_id).c_str()) != 0 && errno != ENOENT) {
+        restored = false;
+      }
+    }
+    for (const CacheFileSnapshot& snapshot : snapshots) {
+      if (!restore_file_bytes(path_for(snapshot.event_id), snapshot.bytes)) restored = false;
+    }
+    return restored;
+  };
+
   // Publish every new record before pruning old records. A failed download or
-  // write therefore never authorizes deletion of the prior day's cache.
+  // write therefore never authorizes deletion of the prior day's cache. The
+  // snapshot above also prevents a partial multi-workout replacement from
+  // mixing new records with the previous set.
   for (const CachedWorkout& cached : workouts) {
     const Status saved = save(cached);
-    if (!saved) return saved;
+    if (!saved) {
+      if (!rollback()) return Status::failure(ErrorCode::kStorage, "workout cache rollback failed");
+      return saved;
+    }
   }
 
   DIR* handle = ::opendir(directory_.c_str());
-  if (handle == nullptr) return Status::ok();
+  if (handle == nullptr) {
+    if (!rollback()) return Status::failure(ErrorCode::kStorage, "workout cache rollback failed");
+    return Status::failure(ErrorCode::kStorage, "cannot inspect replaced workout cache");
+  }
   Status result = Status::ok();
   while (const dirent* entry = ::readdir(handle)) {
     const std::string filename(entry->d_name);
@@ -334,6 +427,7 @@ Status WorkoutCache::replace_for_date(const std::string& local_date,
     }
   }
   ::closedir(handle);
+  if (!result && !rollback()) return Status::failure(ErrorCode::kStorage, "workout cache rollback failed");
   return result;
 }
 
