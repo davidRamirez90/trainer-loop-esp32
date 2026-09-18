@@ -4,7 +4,6 @@
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
 #include "esp_log.h"
-#include "freertos/idf_additions.h"
 #include "trainer_loop/fit_encoder.h"
 #include "trainer_loop/hash.h"
 #include "trainer_loop/limits.h"
@@ -206,13 +205,8 @@ void FirmwareApp::start_runtime_task() {
       return;
     }
   }
-  // Keep the deep HTTPS/TLS call stack out of scarce internal RAM.  The task
-  // control block remains internal, while ESP-IDF places this stack in PSRAM.
-  // This leaves the internal heap available for Wi-Fi and AES buffers during
-  // response decryption.
-  if (xTaskCreateWithCaps(&FirmwareApp::runtime_task_entry, "trainer_runtime", kRuntimeStackSize,
-                          this, kRuntimePriority, &runtime_task_,
-                          MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT) != pdPASS) {
+  if (xTaskCreate(&FirmwareApp::runtime_task_entry, "trainer_runtime", kRuntimeStackSize,
+                  this, kRuntimePriority, &runtime_task_) != pdPASS) {
     runtime_task_ = nullptr;
     const std::size_t free_internal = heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     const std::size_t largest_internal = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
