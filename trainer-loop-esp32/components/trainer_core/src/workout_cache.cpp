@@ -369,6 +369,11 @@ std::vector<CachedWorkout> WorkoutCache::list_for_date(const std::string& local_
     if (cached && cached.value->local_date == local_date) result.push_back(std::move(*cached.value));
   }
   ::closedir(handle);
+  // Directory enumeration order is filesystem-dependent. Keep the user's
+  // NEXT sequence stable across boots by sorting on the durable event ID.
+  std::sort(result.begin(), result.end(), [](const CachedWorkout& left, const CachedWorkout& right) {
+    return left.event_id < right.event_id;
+  });
   return result;
 }
 

@@ -375,6 +375,13 @@ int main() {
   assert(cache.save(cached));
   const auto cached_back = cache.load("event-1");
   assert(cached_back && cached_back.value->workout.segments.size() == 3U);
+  trainer_loop::CachedWorkout cached_later = cached;
+  cached_later.event_id = "event-9";
+  assert(cache.save(cached_later));
+  const auto cached_today = cache.list_for_date("2026-09-16");
+  assert(cached_today.size() == 2U);
+  assert(cached_today[0].event_id == "event-1");
+  assert(cached_today[1].event_id == "event-9");
 
   trainer_loop::HistoryStore history(root + "/history.db");
   trainer_loop::SessionSummary summary;
