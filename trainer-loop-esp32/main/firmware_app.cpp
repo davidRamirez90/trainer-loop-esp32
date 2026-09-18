@@ -163,7 +163,12 @@ void FirmwareApp::on_provisioning_stopped() {
 namespace {
 
 constexpr std::uint32_t kRuntimePeriodMs = 100U;
-constexpr std::uint32_t kRuntimeStackSize = 8192U;
+// Intervals sync parses bounded JSON and normalized workouts on this task.
+// The previous 8192-word stack reached only 744 words free after a normal
+// three-request retry, leaving too little margin for an adjacent UI/retry
+// path. Keep the work on the same serialized runtime task, but give it a
+// measured safety margin rather than allowing a stack-overflow reset.
+constexpr std::uint32_t kRuntimeStackSize = 12288U;
 constexpr UBaseType_t kRuntimePriority = 4U;
 constexpr std::uint64_t kFitReservationBytes = 32U;
 constexpr std::uint64_t kSessionMetadataReserveBytes = 16U * 1024U;
