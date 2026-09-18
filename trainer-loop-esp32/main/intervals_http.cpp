@@ -75,8 +75,8 @@ Result<HttpResponse> IntervalsHttpClient::execute(const HttpRequest& request) co
   config.timeout_ms = 15000;
   // Keep the HTTP client's own buffers small; response bodies are streamed
   // through event_handler and uploads are chunked by esp_http_client.
-  config.buffer_size = 4096;
-  config.buffer_size_tx = 2048;
+  config.buffer_size = 2048;
+  config.buffer_size_tx = 1024;
   config.disable_auto_redirect = true;
   config.crt_bundle_attach = esp_crt_bundle_attach;
   ESP_LOGI(kTag, "[DEBUG-TLS] before init internal free=%u largest=%u psram free=%u largest=%u",
