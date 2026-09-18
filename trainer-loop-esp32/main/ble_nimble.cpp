@@ -1004,15 +1004,23 @@ Status NimbleCentral::poll(std::uint64_t now_ms) {
     }
   }
   if (!scan_active_) {
-    for (const PeripheralRole role : {PeripheralRole::kTrainer, PeripheralRole::kHeartRate}) {
-      NimbleRuntimeLink& link = link_for(runtime_.get(), role);
-      const ReconnectState& state = connections_.state(role);
-      const bool restored_selection_due = connections_.selected(role).has_value() &&
-                                           state.link == LinkState::kDisconnected;
-      if (!link.connecting && link.conn_handle == kNoHandle &&
-          (connections_.reconnect_due(role, now_ms) || restored_selection_due)) {
-        const Status reconnect = connect_selected(role);
-        if (!reconnect) return reconnect;
+    NimbleRuntimeLink& trainer = link_for(runtime_.get(), PeripheralRole::kTrainer);
+    NimbleRuntimeLink& heart_rate = link_for(runtime_.get(), PeripheralRole::kHeartRate);
+    // NimBLE accepts one outbound connection procedure at a time. Starting
+    // both saved links in the same poll tick makes the second call return
+    // EBUSY, which previously surfaced as a spurious reconnect/scan failure.
+    if (!trainer.connecting && !heart_rate.connecting) {
+      for (const PeripheralRole role : {PeripheralRole::kTrainer, PeripheralRole::kHeartRate}) {
+        NimbleRuntimeLink& link = link_for(runtime_.get(), role);
+        const ReconnectState& state = connections_.state(role);
+        const bool restored_selection_due = connections_.selected(role).has_value() &&
+                                             state.link == LinkState::kDisconnected;
+        if (!link.connecting && link.conn_handle == kNoHandle &&
+            (connections_.reconnect_due(role, now_ms) || restored_selection_due)) {
+          const Status reconnect = connect_selected(role);
+          if (!reconnect) return reconnect;
+          break;
+        }
       }
     }
   }
