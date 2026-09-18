@@ -466,3 +466,26 @@ The next hardware gate is an authorized application-only write at `0x20000`
 followed by one bounded serial capture of BLE settling, Wi-Fi sync, and the
 DMA/HTTP result. No bootloader, partition table, NVS, LittleFS, erase, or
 credential-bearing backup action is part of this checkpoint.
+
+## Startup BLE-settling follow-up — 2026-09-18
+
+The first hardware capture after the `3a8f4b8` app-only write falsified a
+readiness-only gate: automatic sync began at about 2.3 seconds, before the
+trainer's GATT discovery began at about 2.5 seconds. The trainer and HR
+procedures then occupied the radio through approximately 13.4 seconds, while
+Wi-Fi association timed out. No destructive action or reset command was used;
+the board was power-cycled and the reconnecting serial reader captured the
+application from its re-enumerated port.
+
+Checkpoint `977f434` adds a 20-second startup grace period to automatic sync
+requests, including the post-provisioning handoff. The normal Retry command
+still requests an immediate attempt. A portable test covers delayed due-time
+and preserves the existing backoff behavior. Strict fallback syntax and clean
+ESP-IDF validation pass.
+
+The unflashed `977f434` application is `0x224130` bytes with `0x1dbed0` free
+(46%); bootloader size is `0x5160`; SHA-256 is
+`49de80598f2ac0db26498a7661f68d03f3f916c18c720d7b848d450e202f67fc`.
+The next hardware gate is an app-only write at `0x20000`, followed by a
+power-cycle capture that waits for the delayed sync and records the new
+DMA-capable heap margins and parser result.

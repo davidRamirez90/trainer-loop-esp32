@@ -558,3 +558,18 @@ setup with no panic/watchdog output.
   `f4e1273051d30f3954ff58700ed1a03f623aa40639918db67ee0976ff605d7e0`.
 - [ ] Enter download mode and perform the separately authorized app-only write
   at `0x20000`, then capture one bounded boot/sync window for the new evidence.
+
+## Startup BLE-settling follow-up — 2026-09-18
+
+- [x] The `3a8f4b8` hardware capture showed automatic sync starting at about
+  2.3 s, before GATT discovery started at about 2.5 s; the readiness-only gate
+  therefore could not prevent the overlap.
+- [x] Checkpoint `977f434` adds a 20-second automatic startup grace period and
+  keeps manual Retry immediate. Test-first portable coverage verifies delayed
+  due-time behavior.
+- [x] Strict Clang fallback syntax and a clean ESP-IDF build pass.
+- [x] Unflashed app `977f434`: `0x224130` bytes, `0x1dbed0` free (46%),
+  bootloader `0x5160`, SHA-256
+  `49de80598f2ac0db26498a7661f68d03f3f916c18c720d7b848d450e202f67fc`.
+- [ ] Enter ROM download mode, write only `0x20000`, then power-cycle once
+  with the reconnecting reader active to validate delayed sync.

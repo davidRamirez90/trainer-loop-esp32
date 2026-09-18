@@ -644,3 +644,12 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [ ] Flash and bounded-monitor `3a8f4b8` at application offset `0x20000`.
 - [ ] Confirm a successful today/profile/ZWO sync with trainer and HR links
   available, then repeat the no-trainer retry path without a restart.
+
+## Startup BLE-settling follow-up — 2026-09-18
+
+- [x] Hardware evidence showed the readiness-only sync gate was too early:
+  automatic sync began before BLE GATT discovery.
+- [x] `977f434` adds a 20-second automatic startup grace period; manual Retry
+  remains immediate. Host and ESP-IDF checks pass.
+- [ ] Flash `977f434` at application offset `0x20000` and capture the delayed
+  sync with DMA-capable heap margins.
