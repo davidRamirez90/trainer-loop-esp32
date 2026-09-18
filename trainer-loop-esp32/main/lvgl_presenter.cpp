@@ -779,7 +779,9 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     lv_label_set_text(runtime_->objects.status,
                       snapshot.pairing_scan_active
                           ? "PAIRING  |  SCANNING"
-                          : "PAIRING  |  CHOOSE DEVICE");
+                          : snapshot.pairing_scan_pending
+                                ? "PAIRING  |  WAITING"
+                                : "PAIRING  |  CHOOSE DEVICE");
     char pair_status[192];
     std::snprintf(pair_status, sizeof(pair_status), "Trainer: %s\nHR: %s",
                   snapshot.trainer_status.c_str(), snapshot.heart_rate_status.c_str());
@@ -794,7 +796,9 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     const std::string pairing_message = snapshot.fault.empty()
                                             ? (snapshot.pairing_scan_active
                                                    ? "Scan ends in 15 seconds • tap STOP SCAN to leave"
-                                                   : "Scan finished • choose a row or tap SCAN AGAIN")
+                                                   : snapshot.pairing_scan_pending
+                                                         ? "Waiting for device setup • scan starts automatically"
+                                                         : "Scan finished • choose a row or tap SCAN AGAIN")
                                             : snapshot.fault;
     lv_label_set_text(runtime_->objects.safety, pairing_message.c_str());
     for (std::size_t index = 0U; index < snapshot.device_candidates.size() && index < kPairingRows; ++index) {
@@ -952,8 +956,11 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
   } else if (snapshot.screen == UiScreen::kSettings) {
     set_action(runtime_, "BACK / CANCEL", UiCommandType::kBack, !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kPairing) {
-    set_action(runtime_, snapshot.pairing_scan_active ? "STOP SCAN" : "SCAN AGAIN",
-               snapshot.pairing_scan_active ? UiCommandType::kBack : UiCommandType::kOpenDevices,
+    set_action(runtime_, snapshot.pairing_scan_active ? "STOP SCAN"
+                                : snapshot.pairing_scan_pending ? "CANCEL WAIT" : "SCAN AGAIN",
+               snapshot.pairing_scan_active || snapshot.pairing_scan_pending
+                   ? UiCommandType::kBack
+                   : UiCommandType::kOpenDevices,
                !snapshot.busy);
   } else if (snapshot.screen == UiScreen::kActive && snapshot.pause_available) {
     set_action(runtime_, "PAUSE", UiCommandType::kPause, !snapshot.busy);

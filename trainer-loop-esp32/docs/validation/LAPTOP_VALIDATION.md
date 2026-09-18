@@ -305,3 +305,17 @@ setup with no panic/watchdog output.
   `provisioning.h/.cpp`, `web/setup.html`.
 - Documentation: `README.md`, `docs/IMPLEMENTATION_STATUS.md`,
   `docs/validation/RELEASE_CHECKLIST.md`, this evidence/home-test record.
+
+## Pending application checkpoint — foreground scan recovery
+
+- [x] Host `make test`, Debug CMake/CTest 2/2, strict Clang `-Werror`, and
+  ASan/UBSan pass after making a BLE setup conflict recoverable in the Devices
+  screen.
+- [x] A clean ESP-IDF build produces a `0x222f70`-byte application image with
+  `0x1dd090` bytes free (47%). The image has not yet been flashed in this
+  laptop-validation entry.
+- [ ] After the final Git checkpoint, flash only application offset `0x20000`
+  and supervise boot. Open Devices during BLE setup: the screen must show
+  `PAIRING | WAITING`, then begin a bounded scan automatically; Back must cancel
+  the pending scan. No credential-bearing backup or storage write is part of
+  this validation.

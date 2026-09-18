@@ -131,6 +131,7 @@ struct UiSnapshot {
   bool history_available = false;
   bool next_workout_available = false;
   bool pairing_scan_active = false;
+  bool pairing_scan_pending = false;
   bool busy = false;
   bool simulation_is_virtual = true;
 };

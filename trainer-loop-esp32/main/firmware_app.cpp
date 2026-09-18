@@ -18,6 +18,12 @@
 
 namespace trainer_loop {
 
+namespace {
+
+constexpr std::uint64_t kPairingScanRetryDelayMs = 250U;
+
+}  // namespace
+
 #ifdef ESP_PLATFORM
 namespace {
 
@@ -369,6 +375,7 @@ UiSnapshot FirmwareApp::make_runtime_ui_snapshot(std::uint64_t now_ms) const {
     ui.devices_available = false;
     ui.history_available = false;
     ui.pairing_scan_active = ble_.connection_manager().scanning();
+    ui.pairing_scan_pending = pairing_scan_pending_ && !ui.pairing_scan_active;
     for (std::size_t index = 0U; index < ble_.scan_result_count(); ++index) {
       DeviceIdentity candidate;
       if (ble_.scan_result(index, &candidate)) ui.device_candidates.push_back(std::move(candidate));
@@ -476,6 +483,8 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       history_active_ = false;
       history_detail_active_ = false;
       pairing_active_ = false;
+      pairing_scan_pending_ = false;
+      next_pairing_scan_attempt_ms_ = 0U;
       profile_draft_ = settings_.current().profile;
       profile_field_ = 0;
       ui_message_ = "Adjust values, then Save. Back cancels.";
@@ -544,8 +553,16 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       history_active_ = false;
       history_detail_active_ = false;
       pairing_active_ = true;
+      pairing_scan_pending_ = false;
+      next_pairing_scan_attempt_ms_ = 0U;
       ui_message_.clear();
       status = ble_.start_foreground_scan(now_ms);
+      if (!status && status.error->code == ErrorCode::kConflict) {
+        pairing_scan_pending_ = true;
+        next_pairing_scan_attempt_ms_ = now_ms + kPairingScanRetryDelayMs;
+        ui_message_ = "Waiting for device setup; scan will start automatically";
+        status = Status::ok();
+      }
       break;
     case UiCommandType::kOpenHistory:
       if (coordinator_.snapshot().state == RideState::kRunning ||
@@ -555,6 +572,8 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
         status = Status::failure(ErrorCode::kStorage, "history catalog is unavailable");
       } else {
         pairing_active_ = false;
+        pairing_scan_pending_ = false;
+        next_pairing_scan_attempt_ms_ = 0U;
         history_active_ = true;
         history_detail_active_ = false;
       }
@@ -584,6 +603,8 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       }
       if (status) {
         pairing_active_ = false;
+        pairing_scan_pending_ = false;
+        next_pairing_scan_attempt_ms_ = 0U;
         capabilities_published_ = false;
       }
       break;
@@ -620,6 +641,8 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       if (pairing_active_) {
         status = ble_.stop_scan();
         pairing_active_ = false;
+        pairing_scan_pending_ = false;
+        next_pairing_scan_attempt_ms_ = 0U;
         ui_message_.clear();
         break;
       }
@@ -831,6 +854,23 @@ void FirmwareApp::runtime_loop() {
 
     while (const auto command = display_.pop_command()) {
       process_ui_command(*command, monotonic_ms());
+    }
+    if (pairing_active_ && pairing_scan_pending_ &&
+        !ble_.connection_manager().scanning() && now_ms >= next_pairing_scan_attempt_ms_) {
+      const Status scan = ble_.start_foreground_scan(now_ms);
+      if (scan) {
+        pairing_scan_pending_ = false;
+        next_pairing_scan_attempt_ms_ = 0U;
+        ui_message_.clear();
+      } else if (scan.error->code == ErrorCode::kConflict) {
+        next_pairing_scan_attempt_ms_ = now_ms + kPairingScanRetryDelayMs;
+      } else {
+        pairing_scan_pending_ = false;
+        next_pairing_scan_attempt_ms_ = 0U;
+        ui_message_ = scan.error->message;
+        ESP_LOGW("trainer_app", "automatic BLE scan retry failed: %s",
+                 scan.error->message.c_str());
+      }
     }
     const RideState state_before_auto_retry = coordinator_.snapshot().state;
     if (sync_retry_.due(now_ms, session_is_active(state_before_auto_retry), ui_busy_)) {

@@ -80,6 +80,7 @@ class FirmwareApp {
   std::optional<CachedWorkout> active_cached_workout_;
   bool capabilities_published_ = false;
   bool pairing_active_ = false;
+  bool pairing_scan_pending_ = false;
   bool history_active_ = false;
   bool history_detail_active_ = false;
   std::string history_detail_uuid_;
@@ -94,6 +95,7 @@ class FirmwareApp {
   bool fit_store_ready_ = false;
   bool upload_queue_ready_ = false;
   std::uint64_t next_upload_attempt_ms_ = 0U;
+  std::uint64_t next_pairing_scan_attempt_ms_ = 0U;
   RetryPolicy sync_retry_;
   WifiStation wifi_;
 #ifdef ESP_PLATFORM

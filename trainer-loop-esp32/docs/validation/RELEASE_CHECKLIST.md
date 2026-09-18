@@ -402,3 +402,14 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [ ] Physical acceptance remains open for real-account cache selection,
   scan/reconnect behavior, explicit trainer/HR pairing, control acknowledgements,
   pause/stop safety, touch/readability, and endurance.
+
+## Pending application checkpoint — foreground scan recovery
+
+- [x] A temporary BLE setup conflict now leaves Devices in an explicit waiting
+  state and retries the scan every 250 ms. Back cancels the wait; non-conflict
+  errors remain visible.
+- [x] Host tests, strict Clang `-Werror`, ASan/UBSan, and a clean ESP-IDF build
+  pass. The image is `0x222f70` bytes with `0x1dd090` free (47%).
+- [ ] Flash only the application slot after the final Git checkpoint and run a
+  bounded boot plus supervised Devices scan. This checkpoint does not authorize
+  bootloader, partition, NVS, LittleFS, erase, or credential backup changes.

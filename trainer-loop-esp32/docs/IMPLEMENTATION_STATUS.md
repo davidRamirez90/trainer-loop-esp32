@@ -243,3 +243,13 @@ app version `8ac2336`, the project partition table, LittleFS/LVGL readiness,
 automatic Wi-Fi recovery, three Intervals HTTP 200 responses and BLE/GATT
 setup with no panic/watchdog output. Physical cache selection, touch/readability,
 control-safety, and endurance gates remain open.
+
+The next working-tree change makes a foreground BLE scan conflict recoverable:
+when the user opens Devices while a saved-link GATT setup is still settling,
+the pairing screen shows `PAIRING | WAITING`, explains that scanning will start
+automatically, and retries every 250 ms. Back cancels the wait; a non-conflict
+transport or memory error remains visible for manual diagnosis. This is an
+application-only UI/runtime change and does not alter pairing identity or
+storage behavior. The source was rebuilt with host tests, strict Clang,
+ASan/UBSan, and ESP-IDF; hardware validation is pending the application-only
+flash and a supervised Devices scan.
