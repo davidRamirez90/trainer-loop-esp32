@@ -34,7 +34,14 @@ std::optional<double> object_number(const cJSON* object, const char* key) {
 }
 
 Result<cJSON*> parse_json(const HttpResponse& response) {
-  if (response.status != 200) return Result<cJSON*>::failure(ErrorCode::kTransport, "Intervals response was not successful");
+  if (response.status != 200) {
+    if (response.status >= 400 && response.status < 600) {
+      return Result<cJSON*>::failure(ErrorCode::kTransport,
+                                     "Intervals returned HTTP " + std::to_string(response.status));
+    }
+    return Result<cJSON*>::failure(ErrorCode::kTransport,
+                                   "Intervals returned no usable response");
+  }
   cJSON* root = cJSON_ParseWithLength(response.body.c_str(), response.body.size());
   if (root == nullptr) return Result<cJSON*>::failure(ErrorCode::kMalformedInput, "Intervals response JSON is invalid");
   return Result<cJSON*>::success(root);
@@ -126,7 +133,9 @@ Result<SyncMetadata> IntervalsSync::sync_today(const TimeService& time) {
       return Result<SyncMetadata>::success(metadata);
     }
     if (zwo_response.value->status != 200) {
-      return Result<SyncMetadata>::failure(ErrorCode::kTransport, "Intervals workout download failed");
+      return Result<SyncMetadata>::failure(
+          ErrorCode::kTransport,
+          "Intervals workout download returned HTTP " + std::to_string(zwo_response.value->status));
     }
     if (zwo_response.value->body.size() > kMaxWorkoutSourceBytes) return Result<SyncMetadata>::failure(ErrorCode::kBounds, "Intervals workout source is too large");
     const auto parsed = parse_zwo(zwo_response.value->body);

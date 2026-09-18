@@ -120,7 +120,8 @@ Result<HttpResponse> IntervalsHttpClient::execute(const HttpRequest& request) co
   esp_http_client_cleanup(client);
 
   if (response.too_large) {
-    return Result<HttpResponse>::failure(ErrorCode::kTransport, "Intervals HTTP request failed");
+    return Result<HttpResponse>::failure(ErrorCode::kBounds,
+                                         "Intervals response exceeded the device limit");
   }
 
   // Some API error responses (notably 401 without a WWW-Authenticate
@@ -128,7 +129,12 @@ Result<HttpResponse> IntervalsHttpClient::execute(const HttpRequest& request) co
   // useful HTTP status and body were received. Preserve HTTP error responses
   // so setup can distinguish rejected credentials from transport failures.
   if (error != ESP_OK && (status < 400 || status >= 600)) {
-    return Result<HttpResponse>::failure(ErrorCode::kTransport, "Intervals HTTP request failed");
+    if (error == ESP_ERR_TIMEOUT) {
+      return Result<HttpResponse>::failure(ErrorCode::kTimeout,
+                                           "Intervals request timed out; tap Retry");
+    }
+    return Result<HttpResponse>::failure(ErrorCode::kTransport,
+                                         "Intervals network/TLS request failed; tap Retry");
   }
 
   return Result<HttpResponse>::success(HttpResponse{status, std::move(response.body), response.retry_after_s});

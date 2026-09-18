@@ -87,8 +87,11 @@ Status FirmwareApp::commit_setup(const SetupCandidate& candidate) {
     return Status::failure(ErrorCode::kAuthentication, "Intervals credentials were rejected");
   }
   if (athlete.value->status != 200) {
-    ESP_LOGW("trainer_setup", "Intervals athlete verification returned unexpected HTTP status");
-    return Status::failure(ErrorCode::kTransport, "Intervals athlete verification failed");
+    ESP_LOGW("trainer_setup", "Intervals athlete verification returned HTTP %d",
+             athlete.value->status);
+    return Status::failure(ErrorCode::kTransport,
+                           "Intervals athlete verification returned HTTP " +
+                               std::to_string(athlete.value->status));
   }
 
   const Status persisted = nvs_.save(*prepared.value);
