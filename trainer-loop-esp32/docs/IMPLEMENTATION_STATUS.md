@@ -310,3 +310,7 @@ automatic Wi-Fi recovery, three Intervals HTTP 200 responses, BLE/GATT setup,
 and no panic/watchdog output. No bootloader, partition table, NVS, LittleFS,
 erase, or credential-bearing backup action was performed. Physical display
 readability/touch and trainer/HR safety gates remain open.
+
+A live camera spot-check after this write showed the active ride layout and
+large action controls inside the display bezel. The feed was too soft to prove
+small-text readability or touch accuracy, so those remain hands-on gates.

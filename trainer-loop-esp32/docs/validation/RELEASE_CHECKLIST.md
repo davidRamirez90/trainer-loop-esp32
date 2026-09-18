@@ -476,6 +476,9 @@ history upload retry. Existing hardware ride and upload evidence remains
   setup, and no panic/watchdog output.
 - [x] No bootloader, partition table, NVS, LittleFS, erase, or
   credential-bearing backup action was performed.
+- [x] Live camera spot-check showed the active ride layout and large action
+  controls inside the bezel; it did not prove small-text readability or touch
+  accuracy because the feed was soft.
 - [ ] Physically confirm the corrected status labels and two-line pairing
   rows, then continue explicit pairing, control acknowledgement, pause/stop
   safety, and endurance gates.

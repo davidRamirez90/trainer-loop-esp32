@@ -360,6 +360,9 @@ setup with no panic/watchdog output.
 - [x] Bounded monitor evidence captured the expected partition table,
   LittleFS/LVGL readiness, automatic Wi-Fi recovery, three Intervals HTTP 200
   responses, BLE/GATT setup, and no panic/watchdog output.
+- [x] A live camera spot-check showed the active ride layout and large action
+  controls inside the bezel; the soft feed is insufficient evidence for
+  small-text readability or touch accuracy.
 - [ ] Visually confirm the corrected disconnected status and the two-line
   pairing rows; direct touch, control safety, and endurance remain open.
 
