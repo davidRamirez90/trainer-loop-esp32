@@ -109,12 +109,12 @@ RIDE SAVED summary, exposes clickable history rows and a detail view, keeps one
 Devices entry, uses larger pairing/history buttons, and reports the BLE setup
 conflict as a retryable state instead of leaving the screen apparently locked.
 The completion and history detail views also distinguish uploaded, pending,
-retrying, blocked, and failed upload states.
+retrying, blocked, and failed upload states using user-facing labels.
 
-Checkpoint `f210f62` was built and flashed to the application slot only at
+Checkpoint `cd70fad` was built and flashed to the application slot only at
 `0x20000` (SHA-256
-`df80659de6a1f349dda44b8bc07d207db8126153f175e1779f63e2c08d5158d8`). A
-bounded monitor window confirmed app version `f210f62`, the project partition
+`61fea417e3b87456959f44ebbf158a5d6e9c1c6c0aef44df0618c79e3c74f724`). A
+bounded monitor window confirmed app version `cd70fad`, the project partition
 table, LittleFS mount, LVGL readiness, Wi-Fi recovery, three Intervals HTTP 200
 responses, and no panic/watchdog. The remaining work is physical acceptance of
 the updated touch flow, exact trainer/HR pairing, safe ERG acknowledgements,

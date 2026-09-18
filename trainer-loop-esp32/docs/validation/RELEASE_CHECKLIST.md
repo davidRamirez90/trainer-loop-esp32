@@ -10,7 +10,7 @@ security, or service validation.
 - [x] `make test` and explicit Debug CMake/build/CTest: 2/2 pass, including
   official Garmin FIT Python SDK 21.214.0 validation of four session fixtures.
 - [x] ESP-IDF build with runtime settings/retry, pairing-state handling and
-  post-ride UI updates: app `0x21fa90`, app partition free `0x1e0570` (47%);
+  post-ride UI updates: app `0x21fc80`, app partition free `0x1e0380` (47%);
   bootloader `0x5160` with 36% free.
 - [x] Deterministic parser, clock, safety/replay, offline eligibility, upload
   failure/reboot, Retry-After rebasing, finalized-session enumeration,
@@ -241,10 +241,10 @@ validated.
 
 ## Latest application-only validation — 2026-09-18
 
-- [x] Checkpoint `f210f62` was flashed only to application offset `0x20000`;
+- [x] Checkpoint `cd70fad` was flashed only to application offset `0x20000`;
   esptool verified the image hash. No bootloader, partition table, NVS, or
   LittleFS storage write was performed.
-- [x] Boot log identified app version `f210f62`, the expected project partition
+- [x] Boot log identified app version `cd70fad`, the expected project partition
   table, LittleFS mount, SH8601/LVGL readiness, Wi-Fi recovery, and three
   Intervals HTTP 200 responses without panic/watchdog output.
 - [ ] On-device acceptance of the updated pairing, completion, and History
