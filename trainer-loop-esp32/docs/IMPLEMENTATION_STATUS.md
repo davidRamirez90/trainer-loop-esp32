@@ -381,3 +381,28 @@ BLE/GATT setup, and no panic/watchdog output. No bootloader, partition table,
 NVS, LittleFS, erase, or credential-bearing backup action was performed.
 Physical BOOT short-press, long-press hold, display readability, touch
 accuracy, trainer/HR control safety, and endurance gates remain open.
+
+Checkpoint `38ad6f5` adds bounded retry diagnostics: reset reason, runtime
+stack high-water mark, internal heap margin, and retry stage boundaries are
+logged without including credentials, addresses, or response bodies. The
+previous 8192-word runtime task reached only 744 free words after the normal
+three-request Intervals sync; that automatic path completed with HTTP 200
+responses and no panic or watchdog output, but the margin made an intermittent
+manual-retry stack failure a concrete risk.
+
+Checkpoint `9085764` raises only the runtime task stack to 12288 words. The
+clean ESP-IDF image is `0x2240a0` bytes with `0x1dbf60` bytes free (46%) and
+SHA-256
+`d752f8e254820ed829b63613d31d443f875d7273af649b4570e569cb2c8574fa`.
+It was flashed only at application offset `0x20000`; esptool verified the
+image hash. No bootloader, partition table, NVS, LittleFS, erase, or
+credential-bearing backup action was performed. Host smoke tests and Debug
+CTest 2/2 pass.
+
+A passive serial window after the write observed the bootloader and no reset
+or panic line during the capture. The application log was not replayed because
+the reader attached after boot, and a second attached window did not capture a
+manual Retry action. Therefore the larger stack is deployed and the automatic
+path is previously evidenced, but the reported manual-retry restart is not yet
+physically reproduced on this image. The next hardware gate is one attached
+serial capture with a single Home Retry tap; do not issue a serial reset.

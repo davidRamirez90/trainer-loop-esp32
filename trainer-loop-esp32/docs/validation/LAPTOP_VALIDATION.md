@@ -468,6 +468,22 @@ setup with no panic/watchdog output.
   paused ride, then verify End & Save creates the same local summary/upload
   behavior as before.
 
+## Retry stack-margin checkpoint — 2026-09-18
+
+- `38ad6f5` added sanitized runtime health and retry-stage logging. The prior
+  automatic retry completed its three-request Intervals sync but left only 744
+  free words on the 8192-word runtime task stack.
+- `9085764` raises that task stack to 12288 words. `env -u IDF_PATH make test`
+  and Debug CTest 2/2 pass. The clean ESP-IDF 5.5.4 build produced app
+  `0x2240a0` bytes with `0x1dbf60` free (46%) and bootloader `0x5160`.
+  SHA-256: `d752f8e254820ed829b63613d31d443f875d7273af649b4570e569cb2c8574fa`.
+- The image was written only at application offset `0x20000`; esptool verified
+  the hash. No bootloader, partition table, NVS, LittleFS, erase, or
+  credential-bearing backup action was performed.
+- A passive post-write capture saw the bootloader but no application output
+  because the reader attached after boot. A second attached window did not
+  include a manual Retry tap, so manual reset reproduction remains open.
+
 ## Latest application-only validation — 2026-09-18
 
 - `e3e8d6d` adds `ButtonGesture`, a portable 40 ms debounce/1 s long-press

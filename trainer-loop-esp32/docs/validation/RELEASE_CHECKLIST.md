@@ -580,3 +580,20 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [ ] Physically verify BOOT short press while riding, safe Back behavior in
   non-ride screens, long-press handling, touch/readability, control
   acknowledgements, pause/stop safety, reconnect behavior, and endurance.
+
+## Retry reset diagnosis — 2026-09-18
+
+- [x] Checkpoint `38ad6f5` added sanitized reset, stack, heap, and retry-stage
+  diagnostics. The prior automatic retry reached 744 free words on the
+  8192-word runtime stack after three successful Intervals HTTP responses.
+- [x] Checkpoint `9085764` increased only the runtime task stack to 12288
+  words. Clean ESP-IDF image: `0x2240a0` bytes, `0x1dbf60` free (46%),
+  bootloader `0x5160`; SHA-256
+  `d752f8e254820ed829b63613d31d443f875d7273af649b4570e569cb2c8574fa`.
+- [x] App-only write at `0x20000` completed with esptool hash verification.
+  No bootloader, partition table, NVS, LittleFS, erase, or credential-bearing
+  backup action was performed.
+- [x] Host smoke tests and Debug CTest 2/2 pass.
+- [ ] Reproduce one manual Home Retry tap while a serial reader is already
+  attached; the first post-write window missed application logs because it
+  attached after boot, and the second window contained no tap/reset event.
