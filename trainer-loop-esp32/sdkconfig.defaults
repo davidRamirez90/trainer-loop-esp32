@@ -30,6 +30,8 @@ CONFIG_FREERTOS_HZ=1000
 # record buffers on demand so the TLS handshake reserves only what it needs.
 CONFIG_MBEDTLS_DYNAMIC_BUFFER=y
 CONFIG_MBEDTLS_DYNAMIC_FREE_CONFIG_DATA=y
+CONFIG_MBEDTLS_DEBUG=y
+CONFIG_MBEDTLS_DEBUG_LEVEL=4
 # Intervals requests are small and the server accepts fragmented TLS records.
 # Keep the outgoing record buffer below the 4 KiB default while preserving the
 # full incoming fragment limit for certificate and API responses.
