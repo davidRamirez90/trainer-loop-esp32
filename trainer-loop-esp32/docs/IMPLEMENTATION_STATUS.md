@@ -119,10 +119,10 @@ The cache now keeps every supported workout returned for today. When more than
 one is available, Home/Preview shows an explicit `1/N` choice, offers a large
 NEXT button, and cycles the selection without changing the single-workout flow.
 
-Checkpoint `a181ed3` was built and flashed to the application slot only at
+Checkpoint `79f587b` was built and flashed to the application slot only at
 `0x20000` (SHA-256
-`cf3959eee60a0b0dff7a0e3729e91727c4e1ca97d1e9bd274051892142c05215`). A
-bounded monitor window confirmed app version `a181ed3`, the project partition
+`144ed3dcd6e9e3b9cc50d4ff841d4a7cd3fe41ae2753401e4070bf56a9a151e1`). A
+bounded monitor window confirmed app version `79f587b`, the project partition
 table, LittleFS mount, LVGL readiness, Wi-Fi recovery, three Intervals HTTP 200
 responses, and no panic/watchdog. The user has since confirmed device
 connection, History navigation, and a static completed-ride elapsed timer.

@@ -127,10 +127,10 @@ No production identity has been assigned or claimed.
 
 After the supervised ride feedback, the portable selector and interval-progress
 contracts were extended test-first and the ESP image was rebuilt from
-checkpoint `a181ed3`. `make test` and Debug CTest remain 2/2, including
-independent FIT decoding. The image is `0x220a30` bytes with `0x1df5d0` free
+checkpoint `79f587b`. `make test` and Debug CTest remain 2/2, including
+independent FIT decoding. The image is `0x220a50` bytes with `0x1df5b0` free
 (47%); SHA-256 is
-`cf3959eee60a0b0dff7a0e3729e91727c4e1ca97d1e9bd274051892142c05215`.
+`144ed3dcd6e9e3b9cc50d4ff841d4a7cd3fe41ae2753401e4070bf56a9a151e1`.
 
 Only the application slot at `0x20000` was written. The monitor confirmed the
 new app version, the existing project partition table, LittleFS mount, LVGL

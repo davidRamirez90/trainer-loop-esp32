@@ -11,7 +11,7 @@ security, or service validation.
   official Garmin FIT Python SDK 21.214.0 validation of four session fixtures.
 - [x] ESP-IDF build with runtime settings/retry, pairing-state handling,
   post-ride UI updates, clarified sync errors, multiple-workout selection and
-  active interval progress: app `0x220a30`, app partition free `0x1df5d0`
+  active interval progress: app `0x220a50`, app partition free `0x1df5b0`
   (47%);
   bootloader `0x5160` with 36% free.
 - [x] Deterministic parser, clock, safety/replay, offline eligibility, upload
@@ -243,14 +243,14 @@ validated.
 
 ## Latest application-only validation — 2026-09-18
 
-- [x] Checkpoint `a181ed3` was flashed only to application offset `0x20000`;
+- [x] Checkpoint `79f587b` was flashed only to application offset `0x20000`;
   esptool verified SHA-256
-  `cf3959eee60a0b0dff7a0e3729e91727c4e1ca97d1e9bd274051892142c05215`. No
+  `144ed3dcd6e9e3b9cc50d4ff841d4a7cd3fe41ae2753401e4070bf56a9a151e1`. No
   bootloader, partition table, NVS, or LittleFS storage write was performed.
-- [x] Boot log identified app version `a181ed3`, the expected project partition
+- [x] Boot log identified app version `79f587b`, the expected project partition
   table, LittleFS mount, SH8601/LVGL readiness, Wi-Fi recovery, and three
   Intervals HTTP 200 responses without panic/watchdog output. App size is
-  `0x220a30`, with `0x1df5d0` free (47%).
+  `0x220a50`, with `0x1df5b0` free (47%).
 - [x] User acceptance confirms device connection, History navigation, and a
   static completed-ride elapsed timer.
 - [ ] On-device acceptance of interval-progress and multiple-workout views
