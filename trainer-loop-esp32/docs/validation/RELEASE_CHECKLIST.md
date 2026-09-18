@@ -597,3 +597,19 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [ ] Reproduce one manual Home Retry tap while a serial reader is already
   attached; the first post-write window missed application logs because it
   attached after boot, and the second window contained no tap/reset event.
+
+## Retry feedback usability fix — 2026-09-18
+
+- [x] Checkpoint `b4504d9` makes active sync feedback take precedence over the
+  unrelated Preview safety text. During a retry, the display now identifies
+  the disabled-button operation as `Retrying connection and sync`; after it
+  completes, `Fresh trainer power required` is shown again when appropriate.
+- [x] Test-first host coverage verifies busy and idle message precedence.
+- [x] Clean ESP-IDF image: `0x224190` bytes, `0x1dbe70` free (46%), bootloader
+  `0x5160`; SHA-256
+  `5524bc56d77011a18dfa41385380b1779450b56c7eaade4673d50a5fb5dac7a3`.
+- [x] App-only write at `0x20000` completed after physical download-mode
+  entry, with esptool hash verification. No bootloader, partition table, NVS,
+  LittleFS, erase, or credential-bearing backup action was performed.
+- [ ] Visually confirm the new busy message during one Retry attempt while the
+  trainer is out of range; no reset event was captured in the bounded window.

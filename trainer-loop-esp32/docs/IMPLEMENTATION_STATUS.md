@@ -406,3 +406,18 @@ manual Retry action. Therefore the larger stack is deployed and the automatic
 path is previously evidenced, but the reported manual-retry restart is not yet
 physically reproduced on this image. The next hardware gate is one attached
 serial capture with a single Home Retry tap; do not issue a serial reset.
+
+Checkpoint `b4504d9` fixes the retry-feedback precedence reported during user
+verification. While the serialized runtime task is performing a foreground
+sync, the visible feedback now says `Retrying connection and sync` even when
+Preview also has the independent `Fresh trainer power required` safety gate.
+After the operation completes, the trainer-power message returns. A
+test-first portable UI contract covers both busy and idle precedence cases.
+The clean ESP-IDF image is `0x224190` bytes with `0x1dbe70` bytes free (46%)
+and SHA-256
+`5524bc56d77011a18dfa41385380b1779450b56c7eaade4673d50a5fb5dac7a3`.
+It was flashed only at application offset `0x20000` after manually entering
+download mode; esptool verified the image hash. No bootloader, partition table,
+NVS, LittleFS, erase, or credential-bearing backup action was performed.
+The passive post-flash window contained no reset event; visual confirmation of
+the busy message remains the hands-on check.

@@ -484,6 +484,20 @@ setup with no panic/watchdog output.
   because the reader attached after boot. A second attached window did not
   include a manual Retry tap, so manual reset reproduction remains open.
 
+## Retry feedback usability fix — 2026-09-18
+
+- `b4504d9` adds the public `ui_feedback_message` contract. Busy sync feedback
+  takes precedence over Preview safety text, so a disabled-button interval is
+  labeled `Retrying connection and sync` rather than appearing to be caused by
+  missing trainer power. Host smoke tests and Debug CTest 2/2 pass.
+- Clean ESP-IDF 5.5.4 build: app `0x224190` bytes, `0x1dbe70` free (46%),
+  bootloader `0x5160`; SHA-256
+  `5524bc56d77011a18dfa41385380b1779450b56c7eaade4673d50a5fb5dac7a3`.
+- The image was written only at application offset `0x20000` after manual
+  download-mode entry; esptool verified the hash. No bootloader, partition
+  table, NVS, LittleFS, erase, or credential-bearing backup action was
+  performed. Visual hardware confirmation remains open.
+
 ## Latest application-only validation — 2026-09-18
 
 - `e3e8d6d` adds `ButtonGesture`, a portable 40 ms debounce/1 s long-press
