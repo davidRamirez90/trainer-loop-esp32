@@ -414,3 +414,28 @@ setup with no panic/watchdog output.
   panic/watchdog output.
 - [ ] Visually confirm the two-line pairing rows and touch feedback on the
   physical display; direct pairing, control safety, and endurance remain open.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Checkpoint `718d19e` makes the visible Home sync result concise and
+  truthful: successful fetches show `Synced`, an empty supported day shows
+  `No workout today`, and detailed failure text remains available.
+- [x] `env -u IDF_PATH make test`, Debug CMake/CTest 2/2, and strict Clang
+  `-Werror` fallback syntax validation pass.
+- [x] Clean ESP-IDF build produced app `718d19e`, size `0x223090` bytes with
+  `0x1dcf70` free (47%); bootloader size remains `0x5160`.
+- [x] Image SHA-256 is
+  `fc15d9995ed297164b14123609fda55b7d831e74304ca5540b40b0e609960798`.
+- [x] The image was written only to application offset `0x20000`; esptool
+  verified the image hash and performed the normal post-write reset. No
+  bootloader, partition table, NVS, LittleFS, erase, or credential-bearing
+  backup action was performed.
+- [x] The bounded monitor identified app `718d19e`, the expected project
+  partition table, LittleFS/LVGL readiness, automatic Wi-Fi recovery, three
+  Intervals HTTP 200 responses, BLE/GATT discovery/subscription activity, and
+  no panic/watchdog output.
+- [x] A camera spot-check showed `Synced`, the compact connection line, four
+  Home tiles, and one `START` action inside the bezel without obvious clipping.
+- [ ] Physically confirm the sync result and link labels under normal viewing,
+  pairing-row touch behavior, trainer/HR selection, FTMS capabilities and
+  acknowledgements, pause/stop safety, reconnect handling, and endurance.

@@ -513,3 +513,25 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [x] Text is readable enough for layout review; touch accuracy,
   disconnect-state transitions, control acknowledgement, and safety remain
   hands-on gates.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Checkpoint `718d19e` reports the actual sync outcome in the visible Home
+  message line (`Synced` or `No workout today`; detailed errors are retained).
+- [x] Host tests, Debug CTest 2/2, and strict Clang `-Werror` validation pass.
+- [x] Clean ESP-IDF build produced a `0x223090`-byte application with
+  `0x1dcf70` free (47%); bootloader size remains `0x5160`.
+- [x] Verified image SHA-256:
+  `fc15d9995ed297164b14123609fda55b7d831e74304ca5540b40b0e609960798`.
+- [x] The image was flashed only to application offset `0x20000`; esptool
+  verified the hash. No bootloader, partition table, NVS, LittleFS, erase, or
+  credential-bearing backup action was performed.
+- [x] Bounded monitor evidence confirmed app `718d19e`, the expected project
+  partition table, LittleFS/LVGL readiness, automatic Wi-Fi recovery, three
+  Intervals HTTP 200 responses, BLE/GATT discovery/subscription activity, and
+  no panic/watchdog output.
+- [x] Camera evidence showed the visible `Synced` result, compact connection
+  line, four Home tiles, and one `START` action within the bezel.
+- [ ] Physical acceptance remains open for sync/link readability, pairing-row
+  touch targets, explicit trainer/HR selection, FTMS capabilities and control
+  acknowledgements, pause/stop safety, reconnect behavior, and endurance.

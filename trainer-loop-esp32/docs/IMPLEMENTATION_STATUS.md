@@ -332,3 +332,20 @@ The follow-up camera spot-check showed the compact connection line, the
 workout context, four distinct Home tiles, and one `START` action inside the
 bezel without obvious clipping. Text was readable enough for layout review;
 touch accuracy and disconnect-state transitions still require hands-on use.
+
+Checkpoint `718d19e` routes the actual Intervals sync result through the
+visible Home message line, so a successful fetch now reads `Synced` and an
+empty supported day reads `No workout today`; detailed failure text remains
+available for diagnosis. Host tests, CTest 2/2, and strict Clang `-Werror`
+fallback syntax validation pass. The clean ESP-IDF image is `0x223090` bytes
+with `0x1dcf70` free (47%); SHA-256 is
+`fc15d9995ed297164b14123609fda55b7d831e74304ca5540b40b0e609960798`.
+It was written only to application offset `0x20000`; no bootloader, partition
+table, NVS, LittleFS, erase, or credential-bearing backup action was performed.
+The bounded monitor identified app `718d19e`, the project partition table,
+LittleFS/LVGL readiness, automatic Wi-Fi recovery, three Intervals HTTP 200
+responses, BLE/GATT discovery/subscription activity, and no panic/watchdog
+output. A camera spot-check showed the visible `Synced` message, compact
+connection line, four Home tiles, and one `START` action inside the bezel;
+touch accuracy and the remaining trainer/HR safety gates still require
+hands-on acceptance.
