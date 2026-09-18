@@ -128,7 +128,14 @@ Result<HttpResponse> IntervalsHttpClient::execute(const HttpRequest& request) co
   // challenge) make esp_http_client_perform return an error even though a
   // useful HTTP status and body were received. Preserve HTTP error responses
   // so setup can distinguish rejected credentials from transport failures.
-  if (error != ESP_OK && (status < 400 || status >= 600)) {
+  const bool preserve_incomplete_get =
+      error == ESP_ERR_HTTP_INCOMPLETE_DATA &&
+      should_preserve_incomplete_get_body(request, status, response.body.size());
+  if (preserve_incomplete_get) {
+    ESP_LOGW(kTag, "incomplete 2xx GET body retained for parser validation (bytes=%u)",
+             static_cast<unsigned>(response.body.size()));
+  }
+  if (error != ESP_OK && !preserve_incomplete_get && (status < 400 || status >= 600)) {
     if (error == ESP_ERR_TIMEOUT) {
       return Result<HttpResponse>::failure(ErrorCode::kTimeout,
                                            "Intervals request timed out; tap Retry");

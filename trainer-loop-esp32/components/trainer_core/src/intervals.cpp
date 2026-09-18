@@ -161,6 +161,11 @@ HttpRequest build_upload_request(const std::string& athlete_id, const std::strin
   return request;
 }
 
+bool should_preserve_incomplete_get_body(const HttpRequest& request, int status,
+                                         std::size_t body_size) {
+  return request.method == "GET" && status >= 200 && status < 300 && body_size > 0U;
+}
+
 UploadHttpResult classify_upload_response(int status, const std::string& body,
                                           std::uint32_t retry_after_s) {
   UploadHttpResult result;

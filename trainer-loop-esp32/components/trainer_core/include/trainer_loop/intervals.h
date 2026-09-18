@@ -28,6 +28,12 @@ HttpRequest build_zwo_request(const std::string& athlete_id, const std::string& 
 HttpRequest build_upload_request(const std::string& athlete_id, const std::string& api_key,
                                  const std::string& session_uuid, const std::string& fit_bytes);
 
+// A 2xx GET body may still be structurally validated by its caller when the
+// transport reports an incomplete read. Upload POST responses remain strict so
+// a lost acknowledgement cannot be mistaken for a successful retry.
+bool should_preserve_incomplete_get_body(const HttpRequest& request, int status,
+                                         std::size_t body_size);
+
 enum class UploadHttpClass : std::uint8_t {
   kAccepted,
   kDuplicate,

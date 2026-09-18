@@ -27,6 +27,12 @@ void migration_contracts() {
 
   assert(classify_upload_response(422, "Invalid FIT: duplicate field").classification == UploadHttpClass::kPermanent);
   assert(classify_upload_response(422, "not a duplicate activity").classification == UploadHttpClass::kPermanent);
+  const HttpRequest incomplete_get = build_athlete_request("athlete", "key");
+  assert(should_preserve_incomplete_get_body(incomplete_get, 200, 1U));
+  assert(!should_preserve_incomplete_get_body(incomplete_get, 200, 0U));
+  assert(!should_preserve_incomplete_get_body(incomplete_get, 429, 1U));
+  const HttpRequest upload_request = build_upload_request("athlete", "key", "session", "fit");
+  assert(!should_preserve_incomplete_get_body(upload_request, 200, 1U));
   const auto root = temporary_directory();
   // Runtime represents timeout, DNS and TLS transport failures as status 0.
   for (const auto& scenario : std::vector<std::pair<std::string, int>>{
