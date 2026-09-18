@@ -47,6 +47,12 @@ Status WifiStation::initialize() {
   wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
   error = esp_wifi_init(&config);
   if (error != ESP_OK && error != ESP_ERR_INVALID_STATE) return Status::failure(ErrorCode::kTransport, "Wi-Fi init failed");
+  // Keep the station awake while BLE links and HTTPS traffic share the radio.
+  // Modem sleep is known to leave some APs in a beacon-timeout/null-frame
+  // state; this device is USB-powered and can trade that power saving for a
+  // reliable control-plane connection.
+  error = esp_wifi_set_ps(WIFI_PS_NONE);
+  if (error != ESP_OK) return Status::failure(ErrorCode::kTransport, "Wi-Fi power-save configuration failed");
   error = esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &WifiStation::event_handler, this);
   if (error != ESP_OK) return Status::failure(ErrorCode::kTransport, "Wi-Fi event registration failed");
   error = esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &WifiStation::event_handler, this);
