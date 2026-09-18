@@ -31,7 +31,7 @@ CONFIG_FREERTOS_HZ=1000
 CONFIG_MBEDTLS_DYNAMIC_BUFFER=y
 CONFIG_MBEDTLS_DYNAMIC_FREE_CONFIG_DATA=y
 CONFIG_MBEDTLS_DEBUG=y
-CONFIG_MBEDTLS_DEBUG_LEVEL=4
+CONFIG_MBEDTLS_DEBUG_LEVEL=2
 # Intervals requests are small and the server accepts fragmented TLS records.
 # Keep the outgoing record buffer below the 4 KiB default while preserving the
 # full incoming fragment limit for certificate and API responses.
