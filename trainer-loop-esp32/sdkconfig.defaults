@@ -35,8 +35,9 @@ CONFIG_MBEDTLS_DYNAMIC_FREE_CONFIG_DATA=y
 # CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC is not set
 CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 # Intervals requests are small and the server accepts fragmented TLS records.
-# Keep the outgoing record buffer below the 4 KiB default while preserving the
-# full incoming fragment limit for certificate and API responses.
+# Keep both record buffers bounded; Intervals' current certificate flight is
+# below 4 KiB and HTTP responses are streamed across records.
+CONFIG_MBEDTLS_SSL_IN_CONTENT_LEN=4096
 CONFIG_MBEDTLS_SSL_OUT_CONTENT_LEN=1024
 
 # BLE-only NimBLE central for trainer and heart-rate peripherals.
