@@ -13,8 +13,13 @@ constexpr std::array<std::uint64_t, 5> kRetryDelaysMs = {
 }  // namespace
 
 void RetryPolicy::request(std::uint64_t now_ms) {
+  request_after(now_ms, 0U);
+}
+
+void RetryPolicy::request_after(std::uint64_t now_ms, std::uint64_t delay_ms) {
   pending_ = true;
-  next_due_ms_ = now_ms;
+  next_due_ms_ = now_ms > std::numeric_limits<std::uint64_t>::max() - delay_ms
+      ? std::numeric_limits<std::uint64_t>::max() : now_ms + delay_ms;
   failures_ = 0U;
 }
 

@@ -23,6 +23,7 @@ namespace trainer_loop {
 namespace {
 
 constexpr std::uint64_t kPairingScanRetryDelayMs = 250U;
+constexpr std::uint64_t kAutomaticSyncStartupDelayMs = 20'000U;
 
 std::uint64_t monotonic_ms() {
   return static_cast<std::uint64_t>(esp_timer_get_time() / 1000);
@@ -154,8 +155,8 @@ void FirmwareApp::on_provisioning_stopped() {
     ESP_LOGE("trainer_app", "BLE could not start after setup: %s", ble_status.error->message.c_str());
     return;
   }
-  sync_retry_.request(monotonic_ms());
-  ESP_LOGI("trainer_app", "automatic workout sync retry armed after setup");
+  sync_retry_.request_after(monotonic_ms(), kAutomaticSyncStartupDelayMs);
+  ESP_LOGI("trainer_app", "automatic workout sync retry armed after setup delay");
   start_runtime_task();
 #endif
 }
@@ -1134,8 +1135,8 @@ void FirmwareApp::start() {
   // Reach the ready UI before any Wi-Fi/SNTP/HTTPS wait. The runtime task
   // performs the same bounded sync sequence in the background, preserving
   // cached/offline riding while avoiding a long startup splash screen.
-  sync_retry_.request(monotonic_ms());
-  ESP_LOGI("trainer_app", "automatic workout sync armed after startup");
+  sync_retry_.request_after(monotonic_ms(), kAutomaticSyncStartupDelayMs);
+  ESP_LOGI("trainer_app", "automatic workout sync armed after startup delay");
 #else
   (void)storage_status;
 #endif

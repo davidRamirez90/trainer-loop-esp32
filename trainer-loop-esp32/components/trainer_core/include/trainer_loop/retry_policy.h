@@ -9,6 +9,7 @@ namespace trainer_loop {
 class RetryPolicy {
  public:
   void request(std::uint64_t now_ms);
+  void request_after(std::uint64_t now_ms, std::uint64_t delay_ms);
   bool due(std::uint64_t now_ms, bool ride_active, bool busy) const;
   void begin();
   void finish(std::uint64_t now_ms, bool success);

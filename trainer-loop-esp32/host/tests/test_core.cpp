@@ -624,6 +624,11 @@ int main() {
   assert(second_ride && second_ride.value->manifest.destination_athlete_id == "second-athlete");
 
   trainer_loop::RetryPolicy retry_policy;
+  trainer_loop::RetryPolicy delayed_retry;
+  delayed_retry.request_after(1000U, 5000U);
+  assert(delayed_retry.pending());
+  assert(!delayed_retry.due(5999U, false, false));
+  assert(delayed_retry.due(6000U, false, false));
   retry_policy.request(1000U);
   assert(retry_policy.pending());
   assert(!retry_policy.due(999U, false, false));
