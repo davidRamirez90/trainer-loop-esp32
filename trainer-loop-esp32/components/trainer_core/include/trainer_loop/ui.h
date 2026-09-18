@@ -142,6 +142,7 @@ Status save_ui_profile(SettingsStore& store, ProfileSettings profile, RideState 
 Status adjust_ui_profile(ProfileSettings* profile, std::size_t field, int direction);
 TodayWorkoutSelection next_today_workout(TodayWorkoutSelection current);
 std::string ui_date_label(const std::string& local_date);
+const char* compact_link_state_label(const std::string& status);
 UiSnapshot make_ui_snapshot(const CoordinatorSnapshot& coordinator, const Workout* workout = nullptr);
 const char* ui_screen_name(UiScreen screen);
 

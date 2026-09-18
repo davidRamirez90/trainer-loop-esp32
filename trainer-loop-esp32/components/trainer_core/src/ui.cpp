@@ -63,6 +63,18 @@ std::string ui_date_label(const std::string& local_date) {
   return std::to_string(day) + " " + kMonths[static_cast<std::size_t>(month - 1)];
 }
 
+const char* compact_link_state_label(const std::string& status) {
+  if (status == "Settings") return "SETTINGS";
+  if (status.find("reconnecting") != std::string::npos) return "RETRY";
+  if (status.find("disconnected") != std::string::npos) return "OFF";
+  if (status.find("connecting") != std::string::npos) return "CONN";
+  if (status.find("connected") != std::string::npos) return "OK";
+  if (status.find("fault") != std::string::npos) return "ERR";
+  if (status.find("unavailable") != std::string::npos) return "--";
+  if (status.find("offline") != std::string::npos) return "OFF";
+  return "--";
+}
+
 namespace {
 
 void fill_workout_profile(UiSnapshot* snapshot, const Workout& workout) {

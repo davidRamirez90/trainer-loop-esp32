@@ -235,18 +235,6 @@ void style_button(lv_obj_t* button, lv_color_t base, lv_color_t pressed,
   lv_obj_set_style_radius(button, radius, LV_PART_MAIN);
 }
 
-const char* compact_link_state(const std::string& status) {
-  if (status == "Settings") return "SETTINGS";
-  if (status.find("reconnecting") != std::string::npos) return "RETRY";
-  if (status.find("connecting") != std::string::npos) return "CONN";
-  if (status.find("connected") != std::string::npos) return "OK";
-  if (status.find("disconnected") != std::string::npos) return "OFF";
-  if (status.find("fault") != std::string::npos) return "ERR";
-  if (status.find("unavailable") != std::string::npos) return "--";
-  if (status.find("offline") != std::string::npos) return "OFF";
-  return "--";
-}
-
 const char* compact_upload_state(const std::string& status) {
   if (status == "UPLOADED") return "SENT";
   if (status == "PENDING" || status == "FIT_PENDING" || status == "UPLOADING") return "WAIT";
@@ -656,9 +644,9 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     std::snprintf(terrain, sizeof(terrain), "--.- km/h     --.-%% grade\n--.- km        +-- m virtual");
   }
   std::snprintf(status, sizeof(status), "TRN %s   HR %s   Wi-Fi %s",
-                compact_link_state(snapshot.trainer_status),
-                compact_link_state(snapshot.heart_rate_status),
-                compact_link_state(snapshot.wifi_status));
+                compact_link_state_label(snapshot.trainer_status),
+                compact_link_state_label(snapshot.heart_rate_status),
+                compact_link_state_label(snapshot.wifi_status));
   std::snprintf(workout, sizeof(workout), "%s%s%s",
                 snapshot.workout_name.empty() ? "No workout selected" : snapshot.workout_name.c_str(),
                 snapshot.interval_status.empty() ? "" : "  |  ",
@@ -737,8 +725,8 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     lv_label_set_text(runtime_->objects.actual_value, ftp);
     char readiness[96];
     std::snprintf(readiness, sizeof(readiness), "Trainer %s   HR %s",
-                  compact_link_state(snapshot.trainer_status),
-                  compact_link_state(snapshot.heart_rate_status));
+                  compact_link_state_label(snapshot.trainer_status),
+                  compact_link_state_label(snapshot.heart_rate_status));
     lv_label_set_text(runtime_->objects.sensors, readiness);
     for (std::size_t index = 0U; index < snapshot.workout_profile_count && index < kUiProfileBars; ++index) {
       const std::uint8_t level = snapshot.workout_profile[index];
