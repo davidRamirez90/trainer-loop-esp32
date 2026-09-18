@@ -39,7 +39,11 @@ bool equals_header(const char* left, const char* right) {
 esp_err_t event_handler(esp_http_client_event_t* event) {
   if (event == nullptr || event->user_data == nullptr) return ESP_OK;
   auto* response = static_cast<ResponseBuffer*>(event->user_data);
-  if (event->event_id == HTTP_EVENT_ON_HEADER && equals_header(event->header_key, "Retry-After") &&
+  if (event->event_id == HTTP_EVENT_ON_CONNECTED) {
+    ESP_LOGI(kTag, "[DEBUG-TLS] transport connected");
+  } else if (event->event_id == HTTP_EVENT_ERROR) {
+    ESP_LOGW(kTag, "[DEBUG-TLS] transport error event");
+  } else if (event->event_id == HTTP_EVENT_ON_HEADER && equals_header(event->header_key, "Retry-After") &&
       event->header_value != nullptr) {
     std::uint64_t seconds = 0U;
     const char* begin = event->header_value;
@@ -83,6 +87,11 @@ Result<HttpResponse> IntervalsHttpClient::execute(const HttpRequest& request) co
   // records too, so an unspecified family can select an unreachable IPv6
   // route and consume the full connection timeout before falling back.
   config.addr_type = HTTP_ADDR_TYPE_INET;
+  // Temporary diagnosis: distinguish socket/DNS failures from a TLS
+  // handshake stall without logging request credentials or response bodies.
+  esp_log_level_set("esp-tls", ESP_LOG_DEBUG);
+  esp_log_level_set("transport_base", ESP_LOG_DEBUG);
+  esp_log_level_set("HTTP_CLIENT", ESP_LOG_DEBUG);
   ESP_LOGI(kTag, "[DEBUG-TLS] before init internal free=%u largest=%u psram free=%u largest=%u",
            static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
