@@ -331,3 +331,6 @@ history upload retry. Existing hardware ride and upload evidence remains
   `f59073d360236474e7bad3e88fab20a3d2753d426579e4818aafc4d1cfa30e6a`.
 - [ ] This image is not flashed. Hardware UI, BLE, ride, storage, and service
   gates remain open; the board remains on `796c401`.
+
+- [x] Test checkpoint `45c9258` adds invalid-date and empty-directory cache
+  replacement boundaries without changing the firmware image.

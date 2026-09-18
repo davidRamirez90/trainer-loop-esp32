@@ -187,6 +187,9 @@ ESP-IDF image is `0x221af0` bytes with `0x1de510` free (47%); SHA-256 is
 `f59073d360236474e7bad3e88fab20a3d2753d426579e4818aafc4d1cfa30e6a`.
 No flash operation was performed; the device still runs `796c401`.
 
+Test checkpoint `45c9258` adds invalid-date and empty-directory replacement
+boundaries; it does not change the firmware image.
+
 ## Exact home testing sequence (deferred)
 
 1. **Do not re-provision.** Bring the existing board, exact Zwift Hub One and
