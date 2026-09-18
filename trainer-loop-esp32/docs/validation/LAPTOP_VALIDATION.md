@@ -467,3 +467,29 @@ setup with no panic/watchdog output.
 - [ ] Physically open the stop confirmation, verify Cancel preserves the
   paused ride, then verify End & Save creates the same local summary/upload
   behavior as before.
+
+## Latest application-only validation — 2026-09-18
+
+- `e3e8d6d` adds `ButtonGesture`, a portable 40 ms debounce/1 s long-press
+  classifier. Host assertions cover bounce, short release, long threshold,
+  and one-shot events. Runtime GPIO0 handling maps short press to `kPause`
+  during a running ride and `kBack` otherwise; long press is logged and
+  ignored without destructive meaning.
+- `env -u IDF_PATH make test` passed: host smoke and Debug CTest 2/2,
+  including independent Garmin FIT validation. Strict Clang fallback syntax
+  validation passed for every `main/*.cpp` translation unit plus the new core
+  source.
+- Clean ESP-IDF 5.5.4 build: app `e3e8d6d`, binary size `0x223cb0` bytes,
+  `0x1dc350` bytes free (47%), bootloader `0x5160`. SHA-256:
+  `f7bbc469776c07ebb96bbf56715ad44d0f9ed06ce3efdf5e0f2bb3764b1967ca`.
+- The application image was written only at `0x20000`; esptool verified the
+  image hash and performed its normal post-write reset. A passive bounded
+  serial read then observed normal boot, the project partition table,
+  LittleFS/LVGL readiness, Wi-Fi association, three Intervals HTTP 200
+  responses, BLE/GATT setup, and no panic/watchdog output. No credentials,
+  bootloader, partition table, NVS, LittleFS, erase, or full-flash backup was
+  read or written.
+- Hardware validation remains open for the physical BOOT gesture, touch and
+  readability, trainer/HR control acknowledgements, stop safety, reconnect,
+  and endurance. The camera spot-check was inconclusive because the device
+  was not in the current camera frame.

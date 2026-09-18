@@ -556,3 +556,27 @@ history upload retry. Existing hardware ride and upload evidence remains
   output.
 - [ ] Physically verify the confirmation/cancel/end-save touch sequence and
   its paused-ride safety behavior before closing the release gate.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Checkpoint `e3e8d6d` adds a 40 ms debounced BOOT gesture classifier with
+  one-shot short and long events. A short press maps to Pause while Running
+  and to the existing Back action otherwise; long press is detected and
+  ignored safely without reset, erase, recovery, or provisioning behavior.
+- [x] Test-first host coverage exercises bounce rejection, short-press
+  release, one-shot delivery, and long-press threshold behavior.
+- [x] `env -u IDF_PATH make test`, Debug CTest 2/2, and strict Clang
+  `-Werror` fallback syntax validation pass.
+- [x] Clean ESP-IDF build produced app `e3e8d6d`, size `0x223cb0` bytes with
+  `0x1dc350` free (47%); bootloader size remains `0x5160`.
+- [x] Verified image SHA-256:
+  `f7bbc469776c07ebb96bbf56715ad44d0f9ed06ce3efdf5e0f2bb3764b1967ca`.
+- [x] The image was flashed only to application offset `0x20000`; esptool
+  verified the image hash. A passive bounded monitor confirmed the expected
+  partition table, LittleFS/LVGL readiness, Wi-Fi association, three
+  Intervals HTTP 200 responses, BLE/GATT setup, and no panic/watchdog output.
+- [x] No bootloader, partition table, NVS, LittleFS, erase, or
+  credential-bearing backup action was performed.
+- [ ] Physically verify BOOT short press while riding, safe Back behavior in
+  non-ride screens, long-press handling, touch/readability, control
+  acknowledgements, pause/stop safety, reconnect behavior, and endurance.

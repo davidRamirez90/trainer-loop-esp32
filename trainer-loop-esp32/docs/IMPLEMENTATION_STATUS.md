@@ -365,3 +365,19 @@ bounded monitor identified app `7e1d439`, LittleFS/LVGL readiness, automatic
 Wi-Fi recovery, three Intervals HTTP 200 responses, BLE/GATT activity, and no
 panic/watchdog output. Physical confirmation of the two-button flow remains
 open.
+
+Checkpoint `e3e8d6d` adds a portable, test-first BOOT gesture classifier. GPIO0
+input is debounced for 40 ms; a short press emits one event and pauses a
+running ride, while the same event maps to the existing Back action elsewhere.
+A long press is detected and logged but deliberately has no reset, erase,
+recovery, or provisioning meaning. Host smoke/CTest 2/2, strict Clang
+fallback syntax, and a clean ESP-IDF build pass. The application image is
+`0x223cb0` bytes with `0x1dc350` free (47%); SHA-256 is
+`f7bbc469776c07ebb96bbf56715ad44d0f9ed06ce3efdf5e0f2bb3764b1967ca`.
+Only application offset `0x20000` was written. A passive bounded monitor
+identified app `e3e8d6d`, the expected project partition table, LittleFS/LVGL
+readiness, automatic Wi-Fi association and three Intervals HTTP 200 responses,
+BLE/GATT setup, and no panic/watchdog output. No bootloader, partition table,
+NVS, LittleFS, erase, or credential-bearing backup action was performed.
+Physical BOOT short-press, long-press hold, display readability, touch
+accuracy, trainer/HR control safety, and endurance gates remain open.
