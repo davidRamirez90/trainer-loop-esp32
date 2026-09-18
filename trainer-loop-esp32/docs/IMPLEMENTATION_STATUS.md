@@ -159,3 +159,15 @@ responses, BLE/GATT startup, and no panic/watchdog output. A live camera
 spot-check showed the inset status line, selected-workout context and larger
 action targets on the physical display; formal touch/readability acceptance
 remains open.
+
+Checkpoint `796c401` adds a compact eight-bar interval profile to Home/Preview,
+derived from the cached workout's relative segment targets. The profile is
+render-only and does not change workout control or selection. Test-first host
+coverage verifies normalized two-segment profiles. The clean ESP image is
+`0x221380` bytes with `0x1dec80` free (47%); SHA-256 is
+`123bfb3fca44d4f826f3c21b5cda66aaa5bda8b35e6e47f43cdfa8ce5a1542df`.
+Only application offset `0x20000` was written. Boot evidence confirmed app
+version `796c401`, LittleFS/LVGL readiness, Wi-Fi recovery, BLE/GATT discovery,
+three Intervals HTTP 200 responses, and no panic/watchdog output. The live
+camera spot-check showed the bars fitting above the shifted action tiles;
+formal touch/readability acceptance remains open.

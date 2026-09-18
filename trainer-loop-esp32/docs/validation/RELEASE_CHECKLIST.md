@@ -292,5 +292,23 @@ validated.
   context and larger action targets on the physical display.
 - [ ] Complete direct touch/readability acceptance, including the Home/Preview
   two-line workout label, all four touch corners, pairing scan retry and
-  history upload retry. Existing hardware ride and upload evidence remains
+history upload retry. Existing hardware ride and upload evidence remains
   valid; this visual spot-check does not close those release gates.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Checkpoint `796c401` was built from a clean Git commit and flashed only
+  to application offset `0x20000`; esptool verified SHA-256
+  `123bfb3fca44d4f826f3c21b5cda66aaa5bda8b35e6e47f43cdfa8ce5a1542df`.
+  No bootloader, partition table, NVS, or LittleFS storage write was
+  performed.
+- [x] The image is `0x221380` bytes with `0x1dec80` free (47%). Boot evidence
+  confirmed app version `796c401`, LittleFS mount, SH8601/LVGL startup,
+  Wi-Fi recovery, BLE/GATT discovery, three Intervals HTTP 200 responses, and
+  no panic/watchdog output.
+- [x] Host `make test`, Debug CMake build and CTest 2/2 passed. Test-first UI
+  coverage verifies normalized interval-profile values.
+- [x] A live camera spot-check showed the eight-bar profile above the shifted
+  Home/Preview action tiles and no obvious bezel clipping.
+- [ ] Complete direct touch/readability acceptance and exercise the profile
+  across short, long and multi-workout plans on the physical display.

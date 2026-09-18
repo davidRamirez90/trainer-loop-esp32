@@ -159,12 +159,24 @@ panic/watchdog output. A live camera preview showed the inset status line and
 the selected-workout context on the real display; direct physical readability
 and touch acceptance remain open.
 
+Checkpoint `796c401` adds a compact eight-bar interval profile to Home/Preview,
+derived from relative cached segment targets. The clean image is `0x221380`
+bytes with `0x1dec80` free (47%); SHA-256 is
+`123bfb3fca44d4f826f3c21b5cda66aaa5bda8b35e6e47f43cdfa8ce5a1542df`.
+`env -u IDF_PATH make test`, the Debug CMake build and CTest 2/2 pass with
+test-first profile assertions. Only application offset `0x20000` was written.
+The monitor confirmed app version `796c401`, LittleFS/LVGL startup, Wi-Fi
+recovery, BLE/GATT discovery, three Intervals HTTP 200 responses and no
+panic/watchdog output. A live camera preview showed the bars above the shifted
+Home/Preview action tiles; direct physical touch/readability acceptance remains
+open.
+
 ## Exact home testing sequence (deferred)
 
 1. **Do not re-provision.** Bring the existing board, exact Zwift Hub One and
    Garmin strap home. Record their firmware/model identities. Keep a rider able
    to stop pedaling immediately and use low workloads for all initial tests.
-2. The board now runs checkpoint `11c1ddc` from an application-only write at
+2. The board now runs checkpoint `796c401` from an application-only write at
    `0x20000`; existing NVS and storage were left untouched, and no
    credential-bearing backup was made. Never use `erase-flash`, change security
    settings, or re-provision as part of this validation record.
