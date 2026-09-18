@@ -459,3 +459,23 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [ ] Physical readability/touch for the two-line pairing rows, explicit
   pairing, control acknowledgement, pause/stop safety, and endurance gates
   remain open.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Test-first UI coverage verifies that disconnected links render `OFF`,
+  connected links render `OK`, and reconnecting links render `RETRY`.
+- [x] `make test`, CTest 2/2, and strict Clang `-Werror` fallback syntax
+  validation pass.
+- [x] Clean ESP-IDF build produced app `d1e1e64`, size `0x222fa0` bytes with
+  `0x1dd060` free (47%); bootloader size is `0x5160`.
+- [x] Verified image SHA-256:
+  `7427bf1c90a0fe4ba1467fc49fcc8a7fab16344a06ae72fa095a7c7513231688`.
+- [x] The image was flashed only to application offset `0x20000`. Bounded
+  monitor evidence confirmed the expected partition table, LittleFS/LVGL
+  readiness, Wi-Fi recovery, three Intervals HTTP 200 responses, BLE/GATT
+  setup, and no panic/watchdog output.
+- [x] No bootloader, partition table, NVS, LittleFS, erase, or
+  credential-bearing backup action was performed.
+- [ ] Physically confirm the corrected status labels and two-line pairing
+  rows, then continue explicit pairing, control acknowledgement, pause/stop
+  safety, and endurance gates.

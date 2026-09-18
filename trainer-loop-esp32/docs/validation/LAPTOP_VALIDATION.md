@@ -344,6 +344,27 @@ setup with no panic/watchdog output.
 
 ## Latest application-only validation — 2026-09-18
 
+- [x] Test-first UI contract covers compact `OFF` for a disconnected link,
+  `OK` for a connected link, and `RETRY` for a reconnecting link; this closes
+  the substring-classification regression that could show a lost link as OK.
+- [x] `env -u IDF_PATH make test`, CTest 2/2, and strict Clang `-Werror`
+  fallback syntax validation pass.
+- [x] Clean ESP-IDF build produced app `d1e1e64`, size `0x222fa0` bytes with
+  `0x1dd060` free (47%); bootloader size remains `0x5160`.
+- [x] Image SHA-256 is
+  `7427bf1c90a0fe4ba1467fc49fcc8a7fab16344a06ae72fa095a7c7513231688`.
+- [x] The image was written only to application offset `0x20000`; esptool
+  verified the image hash and performed the normal post-write reset. No
+  bootloader, partition table, NVS, LittleFS, erase, or credential-bearing
+  backup action was performed.
+- [x] Bounded monitor evidence captured the expected partition table,
+  LittleFS/LVGL readiness, automatic Wi-Fi recovery, three Intervals HTTP 200
+  responses, BLE/GATT setup, and no panic/watchdog output.
+- [ ] Visually confirm the corrected disconnected status and the two-line
+  pairing rows; direct touch, control safety, and endurance remain open.
+
+## Latest application-only validation — 2026-09-18
+
 - [x] Every `main/*.cpp` translation unit passes Clang `-Werror` in the
   non-ESP fallback build; ESP-only retry and startup-sync state is guarded.
 - [x] `env -u IDF_PATH make test` and CTest 2/2 pass after the warning fix.

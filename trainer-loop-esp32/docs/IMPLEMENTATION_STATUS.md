@@ -297,3 +297,16 @@ NVS, LittleFS, erase, or credential-bearing backup action was performed.
 The physical pairing-row readability/touch check, explicit trainer/HR
 selection, control acknowledgement, pause/stop safety, and endurance gates
 remain open.
+
+Checkpoint `d1e1e64` fixes compact link-state classification so `disconnected`
+cannot match the `connected` substring and render a lost link as `OK`. A
+test-first portable contract covers disconnected, connected, and reconnecting
+labels. The clean ESP-IDF image is `0x222fa0` bytes with `0x1dd060` bytes free
+(47%) and SHA-256
+`7427bf1c90a0fe4ba1467fc49fcc8a7fab16344a06ae72fa095a7c7513231688`.
+Only application offset `0x20000` was written. The bounded monitor identified
+app `d1e1e64`, the expected project partition table, LittleFS/LVGL readiness,
+automatic Wi-Fi recovery, three Intervals HTTP 200 responses, BLE/GATT setup,
+and no panic/watchdog output. No bootloader, partition table, NVS, LittleFS,
+erase, or credential-bearing backup action was performed. Physical display
+readability/touch and trainer/HR safety gates remain open.
