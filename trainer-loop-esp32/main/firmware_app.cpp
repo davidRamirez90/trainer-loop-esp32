@@ -287,6 +287,7 @@ void FirmwareApp::load_cached_workout_if_available(bool refresh) {
 UiSnapshot FirmwareApp::make_runtime_ui_snapshot(std::uint64_t now_ms) const {
   UiSnapshot ui = make_ui_snapshot(coordinator_.snapshot(), coordinator_.selected_workout());
   ui.busy = ui_busy_;
+  ui.profile = settings_.current().profile;
   ui.wifi_status = wifi_.connected() ? "Wi-Fi connected" : "Wi-Fi offline";
   ui.history_available = history_ready_ && !session_is_active(coordinator_.snapshot().state);
   if (!ui_message_.empty() && (ui_busy_ || !session_is_active(coordinator_.snapshot().state))) {
@@ -440,7 +441,10 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
   }
   switch (command.type) {
     case UiCommandType::kOpenSettings:
-      settings_active_ = true; history_active_ = false; pairing_active_ = false;
+      settings_active_ = true;
+      history_active_ = false;
+      history_detail_active_ = false;
+      pairing_active_ = false;
       profile_draft_ = settings_.current().profile;
       profile_field_ = 0;
       ui_message_ = "Adjust values, then Save. Back cancels.";

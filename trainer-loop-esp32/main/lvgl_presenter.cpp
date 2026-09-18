@@ -642,6 +642,34 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
   lv_label_set_text(runtime_->objects.timing, timing);
   lv_label_set_text(runtime_->objects.terrain, terrain);
   lv_label_set_text(runtime_->objects.safety, safety);
+
+  if (snapshot.screen == UiScreen::kHome || snapshot.screen == UiScreen::kPreview) {
+    char duration[16];
+    char ftp[24];
+    char today[192];
+    format_duration(duration, sizeof(duration), snapshot.workout_duration_ms);
+    std::snprintf(ftp, sizeof(ftp), "%d W", snapshot.profile.ftp_watts);
+    std::snprintf(today, sizeof(today), "%s%s",
+                  snapshot.screen == UiScreen::kPreview ? "Preview  |  " : "Today  |  ",
+                  snapshot.workout_name.empty() ? "No workout selected" : snapshot.workout_name.c_str());
+    lv_label_set_text(runtime_->objects.workout, today);
+    lv_label_set_text(runtime_->objects.target_caption, "DURATION");
+    lv_label_set_text(runtime_->objects.target_value,
+                      snapshot.workout_name.empty() ? "--:--" : duration);
+    lv_label_set_text(runtime_->objects.actual_caption, "FTP");
+    lv_label_set_text(runtime_->objects.actual_value, ftp);
+    char readiness[96];
+    std::snprintf(readiness, sizeof(readiness), "Trainer %s   HR %s",
+                  compact_link_state(snapshot.trainer_status),
+                  compact_link_state(snapshot.heart_rate_status));
+    lv_label_set_text(runtime_->objects.sensors, readiness);
+  }
+  if (snapshot.screen == UiScreen::kPaused) {
+    lv_label_set_text(runtime_->objects.status, "WORKOUT PAUSED");
+    lv_label_set_text(runtime_->objects.workout, "Workout paused");
+    lv_label_set_text(runtime_->objects.safety,
+                      snapshot.safety_message.empty() ? "Trainer pause confirmed" : snapshot.safety_message.c_str());
+  }
   lv_obj_set_width(runtime_->objects.action, snapshot.screen == UiScreen::kHome ? 168 : 344);
 
   for (std::size_t index = 0U; index < kPairingRows; ++index) {
