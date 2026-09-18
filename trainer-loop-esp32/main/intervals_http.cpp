@@ -3,7 +3,9 @@
 #ifdef ESP_PLATFORM
 
 #include "esp_crt_bundle.h"
+#include "esp_heap_caps.h"
 #include "esp_http_client.h"
+#include "esp_log.h"
 
 #include <algorithm>
 #include <charconv>
@@ -16,6 +18,7 @@ namespace {
 
 constexpr std::size_t kMaxResponseBytes = 256U * 1024U;
 constexpr char kOrigin[] = "https://intervals.icu";
+constexpr char kTag[] = "intervals_http";
 
 struct ResponseBuffer {
   std::string body;
@@ -72,8 +75,18 @@ Result<HttpResponse> IntervalsHttpClient::execute(const HttpRequest& request) co
   config.timeout_ms = 15000;
   config.disable_auto_redirect = true;
   config.crt_bundle_attach = esp_crt_bundle_attach;
+  ESP_LOGI(kTag, "[DEBUG-TLS] before init internal free=%u largest=%u psram free=%u largest=%u",
+           static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)));
   esp_http_client_handle_t client = esp_http_client_init(&config);
   if (client == nullptr) return Result<HttpResponse>::failure(ErrorCode::kTransport, "Intervals HTTP init failed");
+  ESP_LOGI(kTag, "[DEBUG-TLS] after init internal free=%u largest=%u psram free=%u largest=%u",
+           static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)));
   esp_err_t error = esp_http_client_set_method(client, request.method == "POST" ? HTTP_METHOD_POST : HTTP_METHOD_GET);
   if (error == ESP_OK && !request.authorization.empty()) {
     error = esp_http_client_set_header(client, "Authorization", request.authorization.c_str());
@@ -86,6 +99,12 @@ Result<HttpResponse> IntervalsHttpClient::execute(const HttpRequest& request) co
   }
   if (error == ESP_OK) error = esp_http_client_perform(client);
   const int status = esp_http_client_get_status_code(client);
+  ESP_LOGI(kTag, "[DEBUG-TLS] perform error=%s status=%d internal free=%u largest=%u psram free=%u largest=%u",
+           esp_err_to_name(error), status,
+           static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)),
+           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)));
   esp_http_client_cleanup(client);
 
   if (response.too_large) {
