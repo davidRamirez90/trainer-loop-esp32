@@ -259,3 +259,9 @@ LittleFS/LVGL readiness, Wi-Fi lease acquisition, three Intervals HTTP 200
 responses, BLE/GATT setup, and no panic/watchdog output. Direct Devices-scan,
 touch/readability, control-safety, and endurance acceptance remain physical
 gates.
+
+A static audit of the current `main/` and portable-core logging paths found no
+`ESP_LOG*`, `printf`, or equivalent output that includes Wi-Fi credentials, API
+keys, Authorization headers, raw HTTP bodies, or setup tokens. Physical
+crash-output review remains open because it requires exercising the mounted
+device and its reset/recovery paths.

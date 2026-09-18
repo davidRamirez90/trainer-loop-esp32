@@ -214,6 +214,10 @@ and trainer discovery remain open Phase 4/5 gates.
   gloves/sweat conditions, and no accidental reset or factory-reset gesture.
 - [ ] Review all logs/crash paths for SSIDs, passwords, API keys,
   Authorization headers, raw HTTP bodies, and setup tokens.
+- [x] Static source audit of the current application image found no
+  `ESP_LOG*`, `printf`, or equivalent path that prints those secrets, request
+  headers, or HTTP bodies. The unchecked item remains open for physical crash
+  output and release-log review.
 - [ ] Approve the documented secure provisioning/recovery process before
   enabling secure boot, flash encryption, or debug lockdown.
 - [ ] Record compatible Hub/strap firmware, IDF, board-driver, and encoder
