@@ -350,3 +350,20 @@ history upload retry. Existing hardware ride and upload evidence remains
 
 - [x] Test checkpoint `45c9258` adds invalid-date and empty-directory cache
   replacement boundaries without changing the firmware image.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Final application checkpoint `23ac626` was built cleanly and flashed only
+  to application offset `0x20000`; esptool wrote `0x221b10` bytes and verified
+  SHA-256
+  `c5aa36238975c471e56a9f715d9ab1814358663fcfb2b52423ac22930aa92159`.
+  No bootloader, partition table, NVS, or LittleFS storage write was made.
+- [x] The bounded monitor identified app version `23ac626`, the expected
+  project partition table, LittleFS/LVGL startup, automatic Wi-Fi recovery and
+  BLE/GATT startup with no panic/watchdog output. The serialized reconnect
+  path showed no concurrent-connect deferral during the observed startup
+  window. App size is `0x221b10`, with `0x1de4f0` free (47%).
+- [ ] Physical acceptance remains open for scan/reconnect behavior, trainer
+  and HR pairing by explicit address/type, control acknowledgements, pause and
+  stop safety, cache replacement using the real account, touch/readability,
+  and endurance. The RTC oscillator-stop warning remains a time-validity gate.

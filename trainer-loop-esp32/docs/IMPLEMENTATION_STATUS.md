@@ -199,3 +199,16 @@ PCF85063 oscillator-stop warning remains a hardware time-validity gate.
 
 Test checkpoint `45c9258` extends the cache contract with invalid-date and
 empty-directory replacement boundaries; it does not change firmware behavior.
+
+Checkpoint `23ac626` serializes persisted trainer/HR reconnect attempts so the
+NimBLE central starts at most one `ble_gap_connect` operation per poll. This
+removes the avoidable concurrent-connect `EBUSY` path that could surface as a
+BLE scan/setup conflict while the two saved links were being restored. The
+clean ESP-IDF image is `0x221b10` bytes with `0x1de4f0` free (47%); SHA-256 is
+`c5aa36238975c471e56a9f715d9ab1814358663fcfb2b52423ac22930aa92159`.
+Only application offset `0x20000` was written. The bounded monitor identified
+app version `23ac626`, the project partition table, LittleFS/LVGL readiness,
+automatic Wi-Fi recovery, BLE/GATT startup and no panic/watchdog output; no
+concurrent-connect deferral appeared during the observed startup window. The
+known PCF85063 oscillator-stop warning and all supervised physical pairing,
+acknowledgement, safety, and endurance gates remain open.

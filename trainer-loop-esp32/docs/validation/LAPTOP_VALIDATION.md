@@ -199,12 +199,25 @@ write was performed. The PCF85063 oscillator-stop warning remains open.
 Test checkpoint `45c9258` adds invalid-date and empty-directory replacement
 boundaries; it does not change the firmware image.
 
+Checkpoint `23ac626` serializes persisted trainer/HR reconnect attempts so the
+NimBLE central starts at most one connection operation per poll. This avoids a
+second simultaneous `ble_gap_connect` call returning `EBUSY` and being shown as
+a pairing/setup conflict. The clean ESP-IDF image is `0x221b10` bytes with
+`0x1de4f0` free (47%); SHA-256 is
+`c5aa36238975c471e56a9f715d9ab1814358663fcfb2b52423ac22930aa92159`.
+Only application offset `0x20000` was written. The bounded monitor identified
+app version `23ac626`, the project partition table, LittleFS/LVGL startup,
+automatic Wi-Fi recovery, BLE/GATT startup and no panic/watchdog output; no
+concurrent-connect deferral appeared during the observed startup window. This
+is a targeted ESP-only regression fix; the host suite and Debug CTest had
+already passed on the source checkpoint before the ESP build.
+
 ## Exact home testing sequence (deferred)
 
 1. **Do not re-provision.** Bring the existing board, exact Zwift Hub One and
    Garmin strap home. Record their firmware/model identities. Keep a rider able
    to stop pedaling immediately and use low workloads for all initial tests.
-2. The board now runs checkpoint `713e2c0` from an application-only write at
+2. The board now runs checkpoint `23ac626` from an application-only write at
    `0x20000`; existing NVS and storage were left untouched, and no
    credential-bearing backup was made. Never use `erase-flash`, change security
    settings, or re-provision as part of this validation record.
