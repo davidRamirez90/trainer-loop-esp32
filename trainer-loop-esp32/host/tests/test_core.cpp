@@ -511,6 +511,12 @@ int main() {
   assert(connections.state(trainer_loop::PeripheralRole::kTrainer).next_attempt_ms == 1000U);
   assert(connections.scan_started(100U));
   assert(connections.scanning());
+  trainer_loop::DeviceIdentity heart_rate_identity{{7, 8, 9, 10, 11, 12}, 0U, "HRM", -47,
+                                                    trainer_loop::PeripheralRole::kHeartRate};
+  assert(connections.select(heart_rate_identity));
+  assert(!connections.scanning());
+  assert(connections.selected(trainer_loop::PeripheralRole::kHeartRate).has_value());
+  assert(connections.scan_started(100U));
   assert(connections.poll_scan(15100U));
   assert(!connections.scanning());
 

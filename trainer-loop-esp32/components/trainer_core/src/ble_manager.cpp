@@ -48,6 +48,10 @@ Status BleConnectionManager::select(const DeviceIdentity& device) {
   link->reconnect.link = LinkState::kDisconnected;
   link->reconnect.failures = 0U;
   link->reconnect.services_ready = false;
+  // Selecting a result completes the foreground discovery interaction. The
+  // ESP32 transport cancels the controller scan; keep the portable state
+  // model in sync so the UI can immediately start another scan.
+  (void)scan_finished();
   return Status::ok();
 }
 

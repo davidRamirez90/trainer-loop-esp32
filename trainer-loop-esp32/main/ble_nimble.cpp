@@ -1014,6 +1014,10 @@ Status NimbleCentral::select_device(const DeviceIdentity& device) {
   if (!initialized_ || runtime_ == nullptr) {
     return Status::failure(ErrorCode::kConflict, "NimBLE is not initialized");
   }
+  if (scan_active_) {
+    const Status stopped = stop_scan();
+    if (!stopped) return stopped;
+  }
   NimbleRuntimeLink& link = link_for(runtime_.get(), device.role);
   if (link.connecting) return Status::failure(ErrorCode::kConflict, "BLE connection attempt is active");
   if (link.conn_handle != kNoHandle) {

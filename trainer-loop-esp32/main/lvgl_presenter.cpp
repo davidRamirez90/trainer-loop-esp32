@@ -204,6 +204,22 @@ lv_obj_t* make_label(lv_obj_t* parent, int x, int y, int width, int height,
   return label;
 }
 
+void style_button(lv_obj_t* button, lv_color_t base, lv_color_t pressed,
+                  lv_color_t disabled, lv_coord_t radius = 12) {
+  const auto selector = [](lv_state_t state) {
+    return static_cast<lv_style_selector_t>(static_cast<std::uint32_t>(LV_PART_MAIN) |
+                                            static_cast<std::uint32_t>(state));
+  };
+  lv_obj_set_style_bg_color(button, base, selector(LV_STATE_DEFAULT));
+  lv_obj_set_style_bg_color(button, pressed, selector(LV_STATE_PRESSED));
+  lv_obj_set_style_bg_color(button, pressed, selector(LV_STATE_CHECKED));
+  lv_obj_set_style_bg_color(button, disabled, selector(LV_STATE_DISABLED));
+  lv_obj_set_style_border_width(button, 1, selector(LV_STATE_DEFAULT));
+  lv_obj_set_style_border_color(button, lv_color_hex(0x2D6B59), selector(LV_STATE_DEFAULT));
+  lv_obj_set_style_border_color(button, lv_color_hex(0x8AF5CF), selector(LV_STATE_PRESSED));
+  lv_obj_set_style_radius(button, radius, LV_PART_MAIN);
+}
+
 bool create_ui(LvglPresenter::Runtime* runtime) {
   lv_obj_t* root = lv_screen_active();
   if (root == nullptr) return false;
@@ -254,6 +270,8 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
     if (!button) return false;
     lv_obj_set_pos(button, 12 + static_cast<int>(i % 2) * 176, 202 + static_cast<int>(i / 2) * 56);
     lv_obj_set_size(button, 168, 48);
+    style_button(button, lv_color_hex(0x183C32), lv_color_hex(0x45D6A5),
+                 lv_color_hex(0x252A30), 12);
     runtime->extra_contexts[i].runtime = runtime;
     lv_obj_add_event_cb(button, navigation_callback, LV_EVENT_CLICKED, &runtime->extra_contexts[i]);
     runtime->objects.extra_labels[i] = lv_label_create(button);
@@ -266,8 +284,8 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
   if (runtime->objects.action == nullptr) return false;
   lv_obj_set_pos(runtime->objects.action, 12, 370);
   lv_obj_set_size(runtime->objects.action, 168, 64);
-  lv_obj_set_style_bg_color(runtime->objects.action, lv_color_hex(0x183C32), LV_PART_MAIN);
-  lv_obj_set_style_radius(runtime->objects.action, 12, LV_PART_MAIN);
+  style_button(runtime->objects.action, lv_color_hex(0x183C32), lv_color_hex(0x45D6A5),
+               lv_color_hex(0x252A30));
   lv_obj_add_event_cb(runtime->objects.action, action_callback, LV_EVENT_CLICKED, runtime);
   runtime->objects.action_label = lv_label_create(runtime->objects.action);
   if (runtime->objects.action_label == nullptr) return false;
@@ -279,8 +297,8 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
   if (runtime->objects.history_button == nullptr) return false;
   lv_obj_set_pos(runtime->objects.history_button, 188, 370);
   lv_obj_set_size(runtime->objects.history_button, 168, 64);
-  lv_obj_set_style_bg_color(runtime->objects.history_button, lv_color_hex(0x183C32), LV_PART_MAIN);
-  lv_obj_set_style_radius(runtime->objects.history_button, 12, LV_PART_MAIN);
+  style_button(runtime->objects.history_button, lv_color_hex(0x183C32), lv_color_hex(0x45D6A5),
+               lv_color_hex(0x252A30));
   lv_obj_add_flag(runtime->objects.history_button, LV_OBJ_FLAG_HIDDEN);
   runtime->history_context.runtime = runtime;
   runtime->history_context.command = UiCommandType::kOpenHistory;
@@ -295,9 +313,10 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
   for (std::size_t index = 0U; index < kPairingRows; ++index) {
     runtime->objects.candidate_buttons[index] = lv_button_create(root);
     if (runtime->objects.candidate_buttons[index] == nullptr) return false;
-    lv_obj_set_pos(runtime->objects.candidate_buttons[index], 12, 132 + static_cast<int>(index) * 52);
-    lv_obj_set_size(runtime->objects.candidate_buttons[index], 344, 44);
-    lv_obj_set_style_bg_color(runtime->objects.candidate_buttons[index], lv_color_hex(0x183C32), LV_PART_MAIN);
+    lv_obj_set_pos(runtime->objects.candidate_buttons[index], 12, 104 + static_cast<int>(index) * 52);
+    lv_obj_set_size(runtime->objects.candidate_buttons[index], 344, 52);
+    style_button(runtime->objects.candidate_buttons[index], lv_color_hex(0x183C32),
+                 lv_color_hex(0x45D6A5), lv_color_hex(0x252A30), 12);
     lv_obj_add_flag(runtime->objects.candidate_buttons[index], LV_OBJ_FLAG_HIDDEN);
     runtime->candidate_contexts[index].runtime = runtime;
     runtime->candidate_contexts[index].index = index;
@@ -309,6 +328,7 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
     lv_obj_set_style_text_color(runtime->objects.candidate_labels[index], white, LV_PART_MAIN);
     lv_label_set_long_mode(runtime->objects.candidate_labels[index], LV_LABEL_LONG_CLIP);
     lv_obj_set_width(runtime->objects.candidate_labels[index], 320);
+    lv_obj_set_style_pad_left(runtime->objects.candidate_labels[index], 6, LV_PART_MAIN);
     lv_obj_center(runtime->objects.candidate_labels[index]);
   }
 
@@ -317,8 +337,8 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
     if (runtime->objects.history_rows[index] == nullptr) return false;
     lv_obj_set_pos(runtime->objects.history_rows[index], 12, 88 + static_cast<int>(index) * 66);
     lv_obj_set_size(runtime->objects.history_rows[index], 344, 56);
-    lv_obj_set_style_bg_color(runtime->objects.history_rows[index], lv_color_hex(0x183C32), LV_PART_MAIN);
-    lv_obj_set_style_radius(runtime->objects.history_rows[index], 8, LV_PART_MAIN);
+    style_button(runtime->objects.history_rows[index], lv_color_hex(0x183C32), lv_color_hex(0x183C32),
+                 lv_color_hex(0x252A30), 8);
     lv_obj_add_flag(runtime->objects.history_rows[index], LV_OBJ_FLAG_HIDDEN);
     runtime->objects.history_labels[index] = lv_label_create(runtime->objects.history_rows[index]);
     if (runtime->objects.history_labels[index] == nullptr) return false;
@@ -597,9 +617,10 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
   lv_obj_add_flag(runtime_->objects.history_button, LV_OBJ_FLAG_HIDDEN);
   if (snapshot.screen == UiScreen::kPairing) {
     lv_label_set_text(runtime_->objects.status,
-                      snapshot.pairing_scan_active ? "Pairing  |  scanning for FTMS / HR devices"
-                                                    : "Pairing  |  select a discovered device");
-    lv_label_set_text(runtime_->objects.workout, "Choose by address/type — name is metadata only");
+                      snapshot.pairing_scan_active
+                          ? "Pairing  |  scanning — tap a device to connect"
+                          : "Pairing  |  scan finished — choose a device");
+    lv_label_set_text(runtime_->objects.workout, "Rows are large targets • address/type confirm identity");
     lv_label_set_text(runtime_->objects.target_caption, "");
     lv_label_set_text(runtime_->objects.actual_caption, "");
     lv_label_set_text(runtime_->objects.target_value, "");
@@ -607,17 +628,22 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     lv_label_set_text(runtime_->objects.sensors, "");
     lv_label_set_text(runtime_->objects.timing, "");
     lv_label_set_text(runtime_->objects.terrain, "");
-    lv_label_set_text(runtime_->objects.safety, "Scan is bounded to 15 seconds");
+    lv_label_set_text(runtime_->objects.safety,
+                      snapshot.pairing_scan_active
+                          ? "Scan ends in 15 seconds • tap STOP SCAN to leave"
+                          : "Scan finished • choose a row or tap BACK");
     for (std::size_t index = 0U; index < snapshot.device_candidates.size() && index < kPairingRows; ++index) {
       const DeviceIdentity& candidate = snapshot.device_candidates[index];
       char text[128];
       const char* name = candidate.name.empty() ? "Unnamed device" : candidate.name.c_str();
+      const char* role = candidate.role == PeripheralRole::kTrainer ? "TRAINER" : "HR";
       std::snprintf(text, sizeof(text), "%s  [%02X:%02X]  %d dBm  %s", name,
                     static_cast<unsigned>(candidate.address[4]),
                     static_cast<unsigned>(candidate.address[5]),
                     static_cast<int>(candidate.rssi),
-                    candidate.role == PeripheralRole::kTrainer ? "TRAINER" : "HR");
+                    role);
       lv_label_set_text(runtime_->objects.candidate_labels[index], text);
+      lv_obj_set_state(runtime_->objects.candidate_buttons[index], LV_STATE_DISABLED, false);
       lv_obj_remove_flag(runtime_->objects.candidate_buttons[index], LV_OBJ_FLAG_HIDDEN);
     }
   }
@@ -689,7 +715,8 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
   } else if (snapshot.screen == UiScreen::kSettings) {
     set_action(runtime_, "BACK / CANCEL", UiCommandType::kBack, true);
   } else if (snapshot.screen == UiScreen::kPairing) {
-    set_action(runtime_, "CANCEL", UiCommandType::kBack, true);
+    set_action(runtime_, snapshot.pairing_scan_active ? "STOP SCAN" : "BACK",
+               UiCommandType::kBack, true);
   } else if (snapshot.screen == UiScreen::kActive && snapshot.pause_available) {
     set_action(runtime_, "PAUSE", UiCommandType::kPause, true);
   } else if (snapshot.screen == UiScreen::kPaused && snapshot.resume_available) {
