@@ -10,8 +10,9 @@ security, or service validation.
 - [x] `make test` and explicit Debug CMake/build/CTest: 2/2 pass, including
   official Garmin FIT Python SDK 21.214.0 validation of four session fixtures.
 - [x] ESP-IDF build with runtime settings/retry, pairing-state handling,
-  post-ride UI updates, clarified sync errors and multiple-workout selection:
-  app `0x2207e0`, app partition free `0x1df820` (47%);
+  post-ride UI updates, clarified sync errors, multiple-workout selection and
+  active interval progress: app `0x220a30`, app partition free `0x1df5d0`
+  (47%);
   bootloader `0x5160` with 36% free.
 - [x] Deterministic parser, clock, safety/replay, offline eligibility, upload
   failure/reboot, Retry-After rebasing, finalized-session enumeration,
@@ -242,16 +243,16 @@ validated.
 
 ## Latest application-only validation — 2026-09-18
 
-- [x] Checkpoint `99c1e1d` was flashed only to application offset `0x20000`;
+- [x] Checkpoint `a181ed3` was flashed only to application offset `0x20000`;
   esptool verified SHA-256
-  `bc30b5a78cce9d32129b185038e82a84f36d54c4d4c68c313e0620976a273d42`. No
+  `cf3959eee60a0b0dff7a0e3729e91727c4e1ca97d1e9bd274051892142c05215`. No
   bootloader, partition table, NVS, or LittleFS storage write was performed.
-- [x] Boot log identified app version `99c1e1d`, the expected project partition
+- [x] Boot log identified app version `a181ed3`, the expected project partition
   table, LittleFS mount, SH8601/LVGL readiness, Wi-Fi recovery, and three
   Intervals HTTP 200 responses without panic/watchdog output. App size is
-  `0x2207e0`, with `0x1df820` free (47%).
-- [ ] On-device acceptance of the updated pairing, completion, History, and
-  multiple-workout screens remains open. Confirm that the pairing conflict
-  message can be retried after automatic GATT setup settles, that End & Save
-  leaves a static RIDE SAVED screen, History rows open their detail view, and
-  NEXT cycles today's cached workouts.
+  `0x220a30`, with `0x1df5d0` free (47%).
+- [x] User acceptance confirms device connection, History navigation, and a
+  static completed-ride elapsed timer.
+- [ ] On-device acceptance of interval-progress and multiple-workout views
+  remains open. Confirm that the pairing conflict message can be retried after
+  automatic GATT setup settles and that NEXT cycles today's cached workouts.

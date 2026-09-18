@@ -125,18 +125,20 @@ No production identity has been assigned or claimed.
 
 ## Application-only follow-up — 2026-09-18
 
-After the supervised ride feedback, the portable selector contract was extended
-test-first and the ESP image was rebuilt from checkpoint `99c1e1d`. `make test`
-and Debug CTest remain 2/2, including independent FIT decoding. The image is
-`0x2207e0` bytes with `0x1df820` free (47%); SHA-256 is
-`bc30b5a78cce9d32129b185038e82a84f36d54c4d4c68c313e0620976a273d42`.
+After the supervised ride feedback, the portable selector and interval-progress
+contracts were extended test-first and the ESP image was rebuilt from
+checkpoint `a181ed3`. `make test` and Debug CTest remain 2/2, including
+independent FIT decoding. The image is `0x220a30` bytes with `0x1df5d0` free
+(47%); SHA-256 is
+`cf3959eee60a0b0dff7a0e3729e91727c4e1ca97d1e9bd274051892142c05215`.
 
 Only the application slot at `0x20000` was written. The monitor confirmed the
 new app version, the existing project partition table, LittleFS mount, LVGL
 startup, automatic Wi-Fi recovery, three Intervals HTTP 200 responses, and no
-panic/watchdog. No credential-bearing backup was made. Physical acceptance is
-still required for NEXT selection, the scan-conflict retry path, completion
-timer freeze, and clickable History details.
+panic/watchdog. No credential-bearing backup was made. The user has confirmed
+device connection, History navigation, and a static completed-ride timer.
+Physical acceptance is still required for NEXT selection, interval-progress
+readability, and the scan-conflict retry path.
 
 ## Exact home testing sequence (deferred)
 

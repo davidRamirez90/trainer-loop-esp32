@@ -111,16 +111,22 @@ conflict as a retryable state instead of leaving the screen apparently locked.
 The completion and history detail views also distinguish uploaded, pending,
 retrying, blocked, and failed upload states using user-facing labels.
 
+The active ride snapshot now exposes interval position, interval time remaining,
+and whole-workout percentage. The active screen uses those values alongside
+active elapsed time instead of showing raw plan seconds.
+
 The cache now keeps every supported workout returned for today. When more than
 one is available, Home/Preview shows an explicit `1/N` choice, offers a large
 NEXT button, and cycles the selection without changing the single-workout flow.
 
-Checkpoint `99c1e1d` was built and flashed to the application slot only at
+Checkpoint `a181ed3` was built and flashed to the application slot only at
 `0x20000` (SHA-256
-`bc30b5a78cce9d32129b185038e82a84f36d54c4d4c68c313e0620976a273d42`). A
-bounded monitor window confirmed app version `99c1e1d`, the project partition
+`cf3959eee60a0b0dff7a0e3729e91727c4e1ca97d1e9bd274051892142c05215`). A
+bounded monitor window confirmed app version `a181ed3`, the project partition
 table, LittleFS mount, LVGL readiness, Wi-Fi recovery, three Intervals HTTP 200
-responses, and no panic/watchdog. The remaining work is physical acceptance of
-the updated multiple-workout and touch flows, exact trainer/HR pairing, safe
-ERG acknowledgements, ride completion/history navigation, and the release-gate
-endurance and reconnect tests in the checklist.
+responses, and no panic/watchdog. The user has since confirmed device
+connection, History navigation, and a static completed-ride elapsed timer.
+Remaining work is physical acceptance of the interval-progress and
+multiple-workout views, exact trainer/HR pairing behavior under reconnect,
+safe ERG acknowledgements, and the release-gate endurance and reconnect tests
+in the checklist.
