@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <optional>
+#include <string>
 #endif
 
 namespace trainer_loop {
@@ -220,6 +221,18 @@ void style_button(lv_obj_t* button, lv_color_t base, lv_color_t pressed,
   lv_obj_set_style_radius(button, radius, LV_PART_MAIN);
 }
 
+const char* compact_link_state(const std::string& status) {
+  if (status == "Settings") return "SETTINGS";
+  if (status.find("reconnecting") != std::string::npos) return "RETRY";
+  if (status.find("connecting") != std::string::npos) return "CONN";
+  if (status.find("connected") != std::string::npos) return "OK";
+  if (status.find("disconnected") != std::string::npos) return "OFF";
+  if (status.find("fault") != std::string::npos) return "ERR";
+  if (status.find("unavailable") != std::string::npos) return "--";
+  if (status.find("offline") != std::string::npos) return "OFF";
+  return "--";
+}
+
 bool create_ui(LvglPresenter::Runtime* runtime) {
   lv_obj_t* root = lv_screen_active();
   if (root == nullptr) return false;
@@ -231,7 +244,10 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
   const lv_color_t accent = lv_color_hex(0x45D6A5);
   const lv_color_t warning = lv_color_hex(0xFFB547);
 
-  runtime->objects.status = make_label(root, 12, 6, 344, 24, &lv_font_montserrat_14, muted);
+  // The enclosure's rounded bezel masks the outermost pixels. Keep the
+  // connection summary inside a conservative inset and use compact states so
+  // all three links remain visible at once.
+  runtime->objects.status = make_label(root, 24, 6, 320, 24, &lv_font_montserrat_14, muted);
   runtime->objects.workout = make_label(root, 12, 32, 344, 34, &lv_font_montserrat_14, white);
   runtime->objects.target_caption = make_label(root, 12, 70, 160, 20, &lv_font_montserrat_14, muted);
   runtime->objects.target_value = make_label(root, 12, 88, 160, 58, &lv_font_montserrat_48, white);
@@ -588,8 +604,10 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
   } else {
     std::snprintf(terrain, sizeof(terrain), "--.- km/h     --.-%% grade\n--.- km        +-- m virtual");
   }
-  std::snprintf(status, sizeof(status), "%s  |  %s  |  %s", snapshot.trainer_status.c_str(),
-                snapshot.heart_rate_status.c_str(), snapshot.wifi_status.c_str());
+  std::snprintf(status, sizeof(status), "TRN %s   HR %s   Wi-Fi %s",
+                compact_link_state(snapshot.trainer_status),
+                compact_link_state(snapshot.heart_rate_status),
+                compact_link_state(snapshot.wifi_status));
   std::snprintf(workout, sizeof(workout), "%s%s%s",
                 snapshot.workout_name.empty() ? "No workout selected" : snapshot.workout_name.c_str(),
                 snapshot.interval_status.empty() ? "" : "  |  ",
@@ -619,8 +637,8 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
   if (snapshot.screen == UiScreen::kPairing) {
     lv_label_set_text(runtime_->objects.status,
                       snapshot.pairing_scan_active
-                          ? "Pairing  |  scanning — tap a device to connect"
-                          : "Pairing  |  scan finished — choose a device");
+                          ? "PAIRING  |  SCANNING"
+                          : "PAIRING  |  CHOOSE DEVICE");
     lv_label_set_text(runtime_->objects.workout, "Rows are large targets • address/type confirm identity");
     lv_label_set_text(runtime_->objects.target_caption, "");
     lv_label_set_text(runtime_->objects.actual_caption, "");
