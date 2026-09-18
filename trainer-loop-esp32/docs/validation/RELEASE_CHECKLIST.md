@@ -319,7 +319,8 @@ history upload retry. Existing hardware ride and upload evidence remains
   Debug CMake/CTest, strict Clang `-Werror`, and ASan/UBSan checks pass.
 - [ ] Physical touch/readability, BLE reconnect/control acknowledgements, and
   endurance/power-loss gates remain hardware work. The test-only checkpoint was
-  not flashed; the device remains on application image `796c401`.
+  not flashed; at that point the device remained on application image
+  `796c401`.
 
 ## Laptop-only cache consistency follow-up — 2026-09-18
 
@@ -329,8 +330,23 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [x] Host tests and clean ESP-IDF build pass; image size is `0x221af0` with
   `0x1de510` free (47%), SHA-256
   `f59073d360236474e7bad3e88fab20a3d2753d426579e4818aafc4d1cfa30e6a`.
-- [ ] This image is not flashed. Hardware UI, BLE, ride, storage, and service
-  gates remain open; the board remains on `796c401`.
+- [x] This intermediate cache image was not flashed before the final
+  application-only update; its hardware UI, BLE, ride, storage, and service
+  gates remain open.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Final checkpoint `713e2c0` was flashed only to application offset
+  `0x20000`; esptool verified the `0x221af0`-byte image with SHA-256
+  `b9d9cfadf1965125b6167da67af0cd36ca7e740a1c1cf661e6ad0f8a16af8a0b`.
+  No bootloader, partition table, NVS, or LittleFS storage write was made.
+- [x] The bounded boot monitor confirmed app version `713e2c0`, the existing
+  project partition table, LittleFS/LVGL startup, Wi-Fi recovery, three
+  Intervals HTTP 200 responses, BLE/GATT discovery/subscription activity, and
+  no panic/watchdog output.
+- [ ] Direct touch/readability, cache-replacement behavior on the real account,
+  BLE reconnect/control acknowledgements, ride safety, and endurance gates
+  remain open. The RTC oscillator-stop warning remains documented.
 
 - [x] Test checkpoint `45c9258` adds invalid-date and empty-directory cache
   replacement boundaries without changing the firmware image.

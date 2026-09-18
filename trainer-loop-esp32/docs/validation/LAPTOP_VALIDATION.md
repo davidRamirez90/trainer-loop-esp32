@@ -176,8 +176,8 @@ still map to all eight display bars with the final bar at the maximum level.
 The host smoke test, Debug CMake/CTest suite, strict Clang `-Werror` build,
 and ASan/UBSan run pass. The sanitizer run uses the macOS-compatible
 `halt_on_error` configuration; LeakSanitizer is unavailable in this runtime.
-This checkpoint changes tests only. The flashed device image remains
-`796c401`.
+This checkpoint changes tests only. At that point the flashed device image
+remained `796c401`.
 
 Checkpoint `6a6bfea` fixes daily cache replacement. A successful Intervals
 sync now removes stale same-day event records only after the new set is
@@ -185,7 +185,16 @@ written; a successful empty response clears that date, and a failed write
 leaves existing records in place. Host tests cover both paths. The clean
 ESP-IDF image is `0x221af0` bytes with `0x1de510` free (47%); SHA-256 is
 `f59073d360236474e7bad3e88fab20a3d2753d426579e4818aafc4d1cfa30e6a`.
-No flash operation was performed; the device still runs `796c401`.
+At the time of this laptop-only checkpoint, the device still ran `796c401`.
+
+The image was then flashed only to application offset `0x20000` from the clean
+final checkpoint. Esptool wrote `0x221af0` bytes and verified SHA-256
+`b9d9cfadf1965125b6167da67af0cd36ca7e740a1c1cf661e6ad0f8a16af8a0b`.
+The bounded monitor identified app version `713e2c0`, the existing project
+partition table, LittleFS mount, SH8601/LVGL readiness, Wi-Fi recovery, three
+Intervals HTTP 200 responses and BLE/GATT discovery/subscription activity,
+with no panic/watchdog output. No bootloader, partition table, NVS or storage
+write was performed. The PCF85063 oscillator-stop warning remains open.
 
 Test checkpoint `45c9258` adds invalid-date and empty-directory replacement
 boundaries; it does not change the firmware image.
@@ -195,7 +204,7 @@ boundaries; it does not change the firmware image.
 1. **Do not re-provision.** Bring the existing board, exact Zwift Hub One and
    Garmin strap home. Record their firmware/model identities. Keep a rider able
    to stop pedaling immediately and use low workloads for all initial tests.
-2. The board now runs checkpoint `796c401` from an application-only write at
+2. The board now runs checkpoint `713e2c0` from an application-only write at
    `0x20000`; existing NVS and storage were left untouched, and no
    credential-bearing backup was made. Never use `erase-flash`, change security
    settings, or re-provision as part of this validation record.
