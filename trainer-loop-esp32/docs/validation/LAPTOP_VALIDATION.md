@@ -439,3 +439,31 @@ setup with no panic/watchdog output.
 - [ ] Physically confirm the sync result and link labels under normal viewing,
   pairing-row touch behavior, trainer/HR selection, FTMS capabilities and
   acknowledgements, pause/stop safety, reconnect handling, and endurance.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Checkpoint `7e1d439` adds a dedicated stop-confirmation state. The
+  paused ride now offers `END & SAVE` and `CANCEL`; cancellation keeps the ride
+  paused, and the finish command is rejected unless confirmation was opened.
+- [x] Test-first public UI coverage verifies the confirmation snapshot exposes
+  only the finish path and removes resume/settings actions; idle snapshots are
+  unchanged.
+- [x] `env -u IDF_PATH make test`, Debug CMake/CTest 2/2, and strict Clang
+  `-Werror` fallback syntax validation pass.
+- [x] Clean ESP-IDF build produced app `7e1d439`, size `0x223a50` bytes with
+  `0x1dc5b0` free (47%); bootloader size remains `0x5160`.
+- [x] Image SHA-256 is
+  `89828927d90fc320976c12e441f472c59018b4e5c96817c0c54513b0aaf5e3a6`.
+- [x] The image was written only to application offset `0x20000`; esptool
+  verified the image hash and performed the normal post-write reset. No
+  bootloader, partition table, NVS, LittleFS, erase, or credential-bearing
+  backup action was performed.
+- [x] The bounded monitor identified app `7e1d439`, the expected project
+  partition table, LittleFS/LVGL readiness, automatic Wi-Fi recovery, three
+  Intervals HTTP 200 responses, BLE/GATT activity, and no panic/watchdog
+  output.
+- [x] Camera review after reboot confirmed the normal Home layout remains
+  inside the bezel; touch cannot be validated through the camera.
+- [ ] Physically open the stop confirmation, verify Cancel preserves the
+  paused ride, then verify End & Save creates the same local summary/upload
+  behavior as before.

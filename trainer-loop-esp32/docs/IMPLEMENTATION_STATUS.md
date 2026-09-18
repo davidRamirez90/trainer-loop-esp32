@@ -349,3 +349,19 @@ output. A camera spot-check showed the visible `Synced` message, compact
 connection line, four Home tiles, and one `START` action inside the bezel;
 touch accuracy and the remaining trainer/HR safety gates still require
 hands-on acceptance.
+
+Checkpoint `7e1d439` implements the spec's stop-confirmation flow. The paused
+ride action now opens `END WORKOUT?` with separate `END & SAVE` and `CANCEL`
+targets; cancel leaves the ride paused and direct finish commands are rejected
+unless confirmation is active. The transition is covered through the public
+UI snapshot helper, while the ESP presenter renders the dedicated confirmation
+screen. Host `make test`, Debug CTest 2/2, strict Clang fallback syntax, and a
+clean ESP-IDF build pass. The application image is `0x223a50` bytes with
+`0x1dc5b0` free (47%); SHA-256 is
+`89828927d90fc320976c12e441f472c59018b4e5c96817c0c54513b0aaf5e3a6`.
+Only application offset `0x20000` was written; no bootloader, partition table,
+NVS, LittleFS, erase, or credential-bearing backup action was performed. The
+bounded monitor identified app `7e1d439`, LittleFS/LVGL readiness, automatic
+Wi-Fi recovery, three Intervals HTTP 200 responses, BLE/GATT activity, and no
+panic/watchdog output. Physical confirmation of the two-button flow remains
+open.

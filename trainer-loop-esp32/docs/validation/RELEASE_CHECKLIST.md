@@ -535,3 +535,24 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [ ] Physical acceptance remains open for sync/link readability, pairing-row
   touch targets, explicit trainer/HR selection, FTMS capabilities and control
   acknowledgements, pause/stop safety, reconnect behavior, and endurance.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Checkpoint `7e1d439` implements the spec's dedicated stop-confirmation
+  screen with separate `END & SAVE` and `CANCEL` actions. A direct finish is
+  rejected until the confirmation state is entered.
+- [x] Public UI transition coverage and all host/FIT validation pass; strict
+  Clang fallback syntax validation also passes.
+- [x] Clean ESP-IDF build produced a `0x223a50`-byte application with
+  `0x1dc5b0` free (47%); bootloader size remains `0x5160`.
+- [x] Verified image SHA-256:
+  `89828927d90fc320976c12e441f472c59018b4e5c96817c0c54513b0aaf5e3a6`.
+- [x] The image was flashed only to application offset `0x20000`; esptool
+  verified the hash. No bootloader, partition table, NVS, LittleFS, erase, or
+  credential-bearing backup action was performed.
+- [x] Bounded monitor evidence confirmed app `7e1d439`, the expected project
+  partition table, LittleFS/LVGL readiness, automatic Wi-Fi recovery, three
+  Intervals HTTP 200 responses, BLE/GATT activity, and no panic/watchdog
+  output.
+- [ ] Physically verify the confirmation/cancel/end-save touch sequence and
+  its paused-ride safety behavior before closing the release gate.
