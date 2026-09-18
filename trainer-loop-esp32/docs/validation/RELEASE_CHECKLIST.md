@@ -312,3 +312,11 @@ history upload retry. Existing hardware ride and upload evidence remains
   Home/Preview action tiles and no obvious bezel clipping.
 - [ ] Complete direct touch/readability acceptance and exercise the profile
   across short, long and multi-workout plans on the physical display.
+
+## Laptop-only confidence follow-up — 2026-09-18
+
+- [x] Long-plan profile mapping is covered by checkpoint `fef531e`; host smoke,
+  Debug CMake/CTest, strict Clang `-Werror`, and ASan/UBSan checks pass.
+- [ ] Physical touch/readability, BLE reconnect/control acknowledgements, and
+  endurance/power-loss gates remain hardware work. The test-only checkpoint was
+  not flashed; the device remains on application image `796c401`.

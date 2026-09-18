@@ -171,3 +171,11 @@ version `796c401`, LittleFS/LVGL readiness, Wi-Fi recovery, BLE/GATT discovery,
 three Intervals HTTP 200 responses, and no panic/watchdog output. The live
 camera spot-check showed the bars fitting above the shifted action tiles;
 formal touch/readability acceptance remains open.
+
+Checkpoint `fef531e` adds long-plan coverage for the same profile mapping. The
+host smoke test, Debug CMake/CTest suite, strict Clang `-Werror` build, and
+ASan/UBSan run all pass. The sanitizer rerun omits macOS's unsupported leak
+detector and reports no memory or undefined-behavior findings. This is a
+test-only checkpoint; the device continues to run the flashed application
+image `796c401`. Physical touch/readability, reconnect, control-acknowledgement,
+and endurance gates remain open.

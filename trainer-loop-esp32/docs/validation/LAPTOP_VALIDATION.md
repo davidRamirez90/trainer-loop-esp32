@@ -171,6 +171,14 @@ panic/watchdog output. A live camera preview showed the bars above the shifted
 Home/Preview action tiles; direct physical touch/readability acceptance remains
 open.
 
+Checkpoint `fef531e` adds a long-plan profile assertion so ten source segments
+still map to all eight display bars with the final bar at the maximum level.
+The host smoke test, Debug CMake/CTest suite, strict Clang `-Werror` build,
+and ASan/UBSan run pass. The sanitizer run uses the macOS-compatible
+`halt_on_error` configuration; LeakSanitizer is unavailable in this runtime.
+This checkpoint changes tests only. The flashed device image remains
+`796c401`.
+
 ## Exact home testing sequence (deferred)
 
 1. **Do not re-provision.** Bring the existing board, exact Zwift Hub One and
