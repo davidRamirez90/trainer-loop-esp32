@@ -403,13 +403,18 @@ history upload retry. Existing hardware ride and upload evidence remains
   scan/reconnect behavior, explicit trainer/HR pairing, control acknowledgements,
   pause/stop safety, touch/readability, and endurance.
 
-## Pending application checkpoint — foreground scan recovery
+## Latest application-only validation — 2026-09-18
 
-- [x] A temporary BLE setup conflict now leaves Devices in an explicit waiting
-  state and retries the scan every 250 ms. Back cancels the wait; non-conflict
-  errors remain visible.
+- [x] Checkpoint `c4700b2` adds an explicit waiting state for temporary BLE
+  setup conflicts and retries the foreground scan every 250 ms. Back cancels
+  the wait; non-conflict errors remain visible.
 - [x] Host tests, strict Clang `-Werror`, ASan/UBSan, and a clean ESP-IDF build
-  pass. The image is `0x222f70` bytes with `0x1dd090` free (47%).
-- [ ] Flash only the application slot after the final Git checkpoint and run a
-  bounded boot plus supervised Devices scan. This checkpoint does not authorize
-  bootloader, partition, NVS, LittleFS, erase, or credential backup changes.
+  pass. The image is `0x222f80` bytes with `0x1dd080` free (47%).
+- [x] The image was flashed only to application offset `0x20000` after the
+  final Git checkpoint. Boot evidence confirms app `c4700b2`, the expected
+  partition table, LittleFS/LVGL readiness, Wi-Fi lease acquisition, three
+  Intervals HTTP 200 responses, BLE/GATT setup, and no panic/watchdog output.
+  No bootloader, partition, NVS, LittleFS, erase, or credential backup action
+  was performed.
+- [ ] Supervised physical Devices-scan, touch/readability, explicit pairing,
+  control acknowledgement, pause/stop safety, and endurance gates remain open.

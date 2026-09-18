@@ -244,12 +244,18 @@ automatic Wi-Fi recovery, three Intervals HTTP 200 responses and BLE/GATT
 setup with no panic/watchdog output. Physical cache selection, touch/readability,
 control-safety, and endurance gates remain open.
 
-The next working-tree change makes a foreground BLE scan conflict recoverable:
-when the user opens Devices while a saved-link GATT setup is still settling,
-the pairing screen shows `PAIRING | WAITING`, explains that scanning will start
-automatically, and retries every 250 ms. Back cancels the wait; a non-conflict
-transport or memory error remains visible for manual diagnosis. This is an
-application-only UI/runtime change and does not alter pairing identity or
-storage behavior. The source was rebuilt with host tests, strict Clang,
-ASan/UBSan, and ESP-IDF; hardware validation is pending the application-only
-flash and a supervised Devices scan.
+Checkpoint `c4700b2` makes a foreground BLE scan conflict recoverable: when the
+user opens Devices while a saved-link GATT setup is still settling, the pairing
+screen shows `PAIRING | WAITING`, explains that scanning will start automatically,
+and retries every 250 ms. Back cancels the wait; a non-conflict transport or
+memory error remains visible for manual diagnosis. Host tests, strict Clang,
+ASan/UBSan, and a clean ESP-IDF build pass. The `0x222f80`-byte image has
+`0x1dd080` bytes free (47%) and SHA-256
+`391338c1ade1328f52e1d53390ad05cd046768ff4f077cef02850e30aa4695b6`.
+It was flashed only to application offset `0x20000`; no bootloader, partition
+table, NVS, LittleFS, or credential-bearing backup was touched. The bounded
+boot monitor identified app version `c4700b2`, the project partition table,
+LittleFS/LVGL readiness, Wi-Fi lease acquisition, three Intervals HTTP 200
+responses, BLE/GATT setup, and no panic/watchdog output. Direct Devices-scan,
+touch/readability, control-safety, and endurance acceptance remain physical
+gates.

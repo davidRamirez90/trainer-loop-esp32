@@ -306,16 +306,21 @@ setup with no panic/watchdog output.
 - Documentation: `README.md`, `docs/IMPLEMENTATION_STATUS.md`,
   `docs/validation/RELEASE_CHECKLIST.md`, this evidence/home-test record.
 
-## Pending application checkpoint — foreground scan recovery
+## Latest application-only validation — 2026-09-18
 
 - [x] Host `make test`, Debug CMake/CTest 2/2, strict Clang `-Werror`, and
   ASan/UBSan pass after making a BLE setup conflict recoverable in the Devices
   screen.
-- [x] A clean ESP-IDF build produces a `0x222f70`-byte application image with
-  `0x1dd090` bytes free (47%). The image has not yet been flashed in this
-  laptop-validation entry.
-- [ ] After the final Git checkpoint, flash only application offset `0x20000`
-  and supervise boot. Open Devices during BLE setup: the screen must show
-  `PAIRING | WAITING`, then begin a bounded scan automatically; Back must cancel
-  the pending scan. No credential-bearing backup or storage write is part of
-  this validation.
+- [x] Clean checkpoint `c4700b2` was flashed only to application offset
+  `0x20000`; esptool verified the `0x222f80`-byte image with SHA-256
+  `391338c1ade1328f52e1d53390ad05cd046768ff4f077cef02850e30aa4695b6`.
+  No bootloader, partition table, NVS, LittleFS, or credential-bearing backup
+  was touched.
+- [x] The bounded boot monitor identified app version `c4700b2`, the expected
+  project partition table, LittleFS/LVGL readiness, Wi-Fi lease acquisition,
+  three Intervals HTTP 200 responses, BLE/GATT setup, and no panic/watchdog
+  output.
+- [ ] On-device acceptance remains: open Devices during BLE setup and verify
+  `PAIRING | WAITING` transitions to a bounded scan automatically; Back must
+  cancel the pending scan. Direct touch/readability, trainer/HR selection,
+  control acknowledgements, safety, and endurance remain open.
