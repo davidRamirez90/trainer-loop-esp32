@@ -20,13 +20,13 @@ security, or service validation.
   TLS certificate bundle and disabled HTTP redirects; explicit development
   plaintext NVS label. No irreversible security settings changed.
 - [ ] Physically verify the new settings screen, persistence, pause/stop UI,
-  AP expiry shutdown and security controls on the board after an independently
-  authorized application update. This phase did not flash or open serial.
-- [ ] Resolve firmware replacement compatibility before any update: re-read the
-  live partition sector, preserve the old image under an approved backup plan,
-  and explicitly decide whether NVS/storage data must survive. The recorded
-  live `factory`/SPIFFS layout differs from the current `app0`/LittleFS project
-  table, so application-only flashing is not currently presumed safe.
+  AP expiry shutdown and security controls. Clean boot, mount and protected
+  setup AP were verified after the authorized replacement; settings and ride
+  behavior remain open.
+- [x] Resolve firmware replacement compatibility: the live partition sector was
+  re-read, secure boot/encryption were confirmed disabled, and the user decided
+  development NVS/storage data may be discarded. No credential-bearing backup
+  was made; full erase plus manifest replacement was authorized and completed.
 - [x] Guard the development LittleFS format-on-mount-failure path: formatting is
   now enabled only after the labeled partition is verified entirely erased;
   existing bytes force a non-destructive recovery-preserving mount failure.
@@ -223,11 +223,18 @@ P1 richer controls/library/export/CPS/ramp-test work and separately approved
 GPX/free-ride/coaching features remain out of P0. They must not add a trainer
 control path or weaken the safety/recovery guarantees above.
 
-## Read-only maintenance follow-up — 2026-09-17
+## Development replacement follow-up — 2026-09-18
 
-The authorized no-reset/no-stub ROM connection attempt on `/dev/cu.usbmodem2101`
-failed to synchronize. No fresh flash ID, partition sector or full backup was
-obtained; partition compatibility remains unresolved. No reset fallback or
-device write was performed. Laptop tests passed again (CTest 2/2). See the
-[inspection result and proposed backup plan](../hardware/MAINTENANCE-2026-09-17.md); backup approval and
-the explicit NVS/storage preservation decision remain pending.
+The authorized development replacement completed after a fresh 16 MiB
+flash/security check and partition-sector read. Existing data was intentionally
+discarded without a credential-bearing backup. Full erase and manifest write
+completed; bootloader, application and partition table verified. The first boot
+populated OTA metadata as expected. Boot evidence confirms clean LittleFS
+initialization, SH8601/LVGL readiness, protected setup AP startup and no
+panic/watchdog in the bounded monitor window. See
+[maintenance evidence](../hardware/MAINTENANCE-2026-09-17.md).
+
+The board is unprovisioned, so BLE did not initialize. Private web setup is
+required before trainer/HR scanning. Do not begin a resistance workout until
+FTMS capabilities, telemetry, acknowledgements and safe pause/stop behavior are
+validated.

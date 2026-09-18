@@ -57,6 +57,22 @@ host-only and operates on real temporary files; it is not a LittleFS emulator.
 An offline cached ride still requires trusted time: an invalid RTC must block
 Start until time is established. Cached files remain preserved during that block.
 
+## Authorized development replacement — 2026-09-18
+
+After this laptop-only record, the user authorized discarding all development
+device data and declined a credential-bearing backup. A fresh no-stub inspection
+confirmed ESP32-S3 v0.2, 16 MiB flash, secure boot/encryption disabled, and the
+current `partitions.csv` layout. Full-chip erase and the generated manifest
+write completed. Bootloader, application and partition table verification
+passed; the bootloader populated OTA metadata on first boot, so the erased OTA
+initializer is expected to change.
+
+Bounded serial evidence confirmed the new bootloader/application, clean LittleFS
+initialization, SH8601/LVGL readiness and protected web setup at
+`192.168.4.1`, with no panic or watchdog during the observation window. The
+unprovisioned path returns before BLE initialization; private web setup is
+required before trainer/HR scanning. No resistance workout was attempted.
+
 ## Independent FIT results and identity
 
 `host/tests/fit_fixtures.cpp` generates complete, partial, paused and recovered

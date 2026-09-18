@@ -123,3 +123,30 @@ evidence edits is required immediately before executing replacement.
 Independent reviews confirmed the clean NVS path starts protected web setup;
 BLE starts only after private setup completion. Boot/mount/setup readiness can
 be checked without credentials; BLE/HR validation remains pending that user step.
+
+## Replacement execution and boot evidence — 2026-09-18
+
+The ROM-only full-erase command was rejected because this ESP32-S3 ROM does not
+implement `erase_flash`. The authorized esptool RAM stub was then used for the
+same operation. Full-chip erase completed successfully in 2.3 seconds.
+
+The generated `build/flash_args` manifest was written with DIO, 80 MHz, 16 MB:
+bootloader at `0x0`, partition table at `0x8000`, initial OTA metadata at
+`0xf000`, and application at `0x20000`. Each transfer reported a matching hash.
+An independent `verify_flash` pass matched the bootloader, application and
+partition table. The OTA initializer comparison failed after boot because the
+bootloader legitimately populated the initially erased OTA selection records;
+the targeted post-boot read showed valid OTA records rather than the original
+all-`0xff` initializer. This is expected metadata mutation, not an application
+or partition write failure.
+
+After hard reset, the bounded monitor observed the expected new bootloader and
+application. It reported the current partition map, 16 MB flash, 8 MB PSRAM,
+LittleFS mounted at `storage` after clean initialization, SH8601/LVGL readiness,
+and the protected setup AP at `192.168.4.1` with its ten-minute lifetime. No
+panic or watchdog reset appeared during the observation window. The RTC warning
+(`PCF85063 oscillator-stop flag`) remains an acceptance issue. No credentials
+were captured or displayed in the evidence.
+
+The unprovisioned path returns before BLE initialization. Private web setup is
+required before trainer/HR scanning; no BLE or resistance test was attempted.
