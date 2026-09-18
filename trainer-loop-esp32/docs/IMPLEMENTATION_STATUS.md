@@ -280,3 +280,8 @@ identified app version `6244923`, the project partition table, LittleFS/LVGL
 readiness, automatic Wi-Fi recovery, three Intervals HTTP 200 responses,
 BLE/GATT setup, and no panic/watchdog output. The two-line pairing layout still
 needs direct physical readability and touch acceptance.
+
+The host-safe fallback build now also compiles every `main/*.cpp` translation
+unit with Clang `-Werror`; ESP-only retry state and startup-sync bookkeeping are
+guarded from non-ESP unused-variable diagnostics. This is a build-hygiene fix
+only and does not change the ESP runtime behavior.

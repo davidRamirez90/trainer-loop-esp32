@@ -341,3 +341,11 @@ setup with no panic/watchdog output.
   BLE/GATT setup, and no panic/watchdog output.
 - [ ] Visually confirm the two-line pairing rows and touch feedback on the
   physical display; direct pairing, control safety, and endurance remain open.
+
+## Pending application checkpoint — host-safe fallback warning fix
+
+- [x] Every `main/*.cpp` translation unit now passes Clang `-Werror` in the
+  non-ESP fallback build; ESP-only state is correctly guarded.
+- [x] `make test` and CTest 2/2 still pass after the warning fix.
+- [ ] Rebuild from the final checkpoint and update the application-only image;
+  the device remains on `6244923` until that write.

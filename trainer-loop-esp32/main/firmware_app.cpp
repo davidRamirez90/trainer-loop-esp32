@@ -18,14 +18,10 @@
 
 namespace trainer_loop {
 
+#ifdef ESP_PLATFORM
 namespace {
 
 constexpr std::uint64_t kPairingScanRetryDelayMs = 250U;
-
-}  // namespace
-
-#ifdef ESP_PLATFORM
-namespace {
 
 std::uint64_t monotonic_ms() {
   return static_cast<std::uint64_t>(esp_timer_get_time() / 1000);
@@ -901,7 +897,9 @@ void FirmwareApp::runtime_loop() {
 #endif
 
 void FirmwareApp::start() {
+#ifdef ESP_PLATFORM
   bool startup_sync_succeeded = false;
+#endif
   const Status nvs_status = nvs_.initialize();
 #ifdef ESP_PLATFORM
   if (!nvs_status) {

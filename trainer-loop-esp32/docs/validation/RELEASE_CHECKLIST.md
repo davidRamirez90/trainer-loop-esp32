@@ -439,3 +439,12 @@ history upload retry. Existing hardware ride and upload evidence remains
 - [ ] Perform the physical readability/touch check for the two-line pairing
   rows, then continue explicit pairing, control acknowledgement, pause/stop
   safety, and endurance gates.
+
+## Pending application checkpoint — host-safe fallback warning fix
+
+- [x] All `main/*.cpp` translation units pass the host-safe Clang `-Werror`
+  syntax check; ESP-only startup and scan state no longer trigger unused-variable
+  diagnostics in the fallback build.
+- [x] `make test` and CTest 2/2 pass after the fix.
+- [ ] Rebuild and flash the final application-only image, then repeat bounded
+  boot verification; physical pairing/readability and safety gates remain open.
