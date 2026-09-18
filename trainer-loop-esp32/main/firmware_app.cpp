@@ -42,6 +42,11 @@ Result<SyncMetadata> FirmwareApp::sync_today_and_persist() {
 #endif
   const auto result = intervals_sync_.sync_today(time_);
   last_sync_state_ = result ? result.value->state : SyncState::kError;
+  if (result && (last_sync_state_ == SyncState::kSuccess ||
+                 last_sync_state_ == SyncState::kEmpty ||
+                 last_sync_state_ == SyncState::kAuthBlocked)) {
+    ui_message_ = sync_state_label(last_sync_state_);
+  }
 #ifdef ESP_PLATFORM
   if (result && settings_.current().generation != generation_before) {
     const Status persisted = nvs_.save(settings_.current());
@@ -449,9 +454,7 @@ Status FirmwareApp::retry_connection_and_sync(std::uint64_t now_ms) {
       status = Status::failure(ErrorCode::kAuthentication,
                                "Intervals credentials rejected; cached workouts kept");
     } else {
-      ui_message_ = sync.value->state == SyncState::kEmpty
-          ? "No supported workout scheduled today. Cached workouts kept."
-          : "Workout sync complete";
+      ui_message_ = sync_state_label(sync.value->state);
       load_cached_workout_if_available(true);
     }
   }
