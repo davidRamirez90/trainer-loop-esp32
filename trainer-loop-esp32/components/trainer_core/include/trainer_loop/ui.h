@@ -144,6 +144,7 @@ Status adjust_ui_profile(ProfileSettings* profile, std::size_t field, int direct
 TodayWorkoutSelection next_today_workout(TodayWorkoutSelection current);
 std::string ui_date_label(const std::string& local_date);
 const char* compact_link_state_label(const std::string& status);
+std::string ui_feedback_message(const UiSnapshot& snapshot);
 UiSnapshot make_ui_snapshot(const CoordinatorSnapshot& coordinator, const Workout* workout = nullptr);
 UiSnapshot make_stop_confirmation_snapshot(UiSnapshot snapshot);
 const char* ui_screen_name(UiScreen screen);

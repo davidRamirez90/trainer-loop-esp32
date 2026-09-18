@@ -651,7 +651,8 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
                 snapshot.workout_name.empty() ? "No workout selected" : snapshot.workout_name.c_str(),
                 snapshot.interval_status.empty() ? "" : "  |  ",
                 snapshot.interval_status.empty() ? "" : snapshot.interval_status.c_str());
-  const char* safety_text = snapshot.safety_message.empty() ? snapshot.fault.c_str() : snapshot.safety_message.c_str();
+  const std::string feedback = ui_feedback_message(snapshot);
+  const char* safety_text = feedback.c_str();
   std::snprintf(safety, sizeof(safety), "%s", safety_text[0] == '\0' ? "Ready" : safety_text);
 
   lv_label_set_text(runtime_->objects.status, status);

@@ -5,6 +5,13 @@ void ui_settings_contracts() {
   assert(std::string(compact_link_state_label("Trainer disconnected")) == "OFF");
   assert(std::string(compact_link_state_label("Trainer connected")) == "OK");
   assert(std::string(compact_link_state_label("HR reconnecting")) == "RETRY");
+  UiSnapshot retry_snapshot;
+  retry_snapshot.busy = true;
+  retry_snapshot.fault = "Retrying connection and sync";
+  retry_snapshot.safety_message = "Fresh trainer power required";
+  assert(ui_feedback_message(retry_snapshot) == "Retrying connection and sync");
+  retry_snapshot.busy = false;
+  assert(ui_feedback_message(retry_snapshot) == "Fresh trainer power required");
   assert(UiCommandType::kRetry != UiCommandType::kRetryUploads);
   CoordinatorSnapshot paused_snapshot;
   paused_snapshot.state = RideState::kPaused;

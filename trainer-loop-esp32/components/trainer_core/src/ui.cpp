@@ -75,6 +75,15 @@ const char* compact_link_state_label(const std::string& status) {
   return "--";
 }
 
+std::string ui_feedback_message(const UiSnapshot& snapshot) {
+  // A foreground sync must explain why controls are disabled. Preview safety
+  // text remains useful after the operation completes, but it must not hide a
+  // live retry status while the serialized runtime task is busy.
+  if (snapshot.busy && !snapshot.fault.empty()) return snapshot.fault;
+  if (!snapshot.safety_message.empty()) return snapshot.safety_message;
+  return snapshot.fault;
+}
+
 namespace {
 
 void fill_workout_profile(UiSnapshot* snapshot, const Workout& workout) {
