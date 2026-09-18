@@ -968,7 +968,6 @@ void FirmwareApp::runtime_loop() {
 
 void FirmwareApp::start() {
 #ifdef ESP_PLATFORM
-  bool startup_sync_succeeded = false;
   ESP_LOGI("trainer_app", "reset reason=%d", static_cast<int>(esp_reset_reason()));
 #endif
   const Status nvs_status = nvs_.initialize();
@@ -1108,27 +1107,6 @@ void FirmwareApp::start() {
   }
 
   configure_timezone(settings_.current().profile);
-  if (settings_.has_committed_settings()) {
-    const Status connected = wifi_.connect(settings_.current().secrets.wifi_ssid,
-                                           settings_.current().secrets.wifi_password);
-    if (!connected) {
-      ESP_LOGW("trainer_app", "Wi-Fi connection could not start; cached/offline mode remains available");
-    } else if (wifi_.wait_for_connection(10000U)) {
-      const Status synchronized = time_sync_.synchronize(&time_, 10000U);
-      if (!synchronized) {
-        ESP_LOGW("trainer_app", "SNTP refresh deferred: %s", synchronized.error->message.c_str());
-      } else {
-        const auto sync = sync_today_and_persist();
-        if (!sync) {
-          ESP_LOGW("trainer_app", "today workout sync deferred: %s", sync.error->message.c_str());
-        } else {
-          startup_sync_succeeded = true;
-        }
-      }
-    } else {
-      ESP_LOGW("trainer_app", "Wi-Fi association timed out; cached/offline mode remains available");
-    }
-  }
   const Status ble_status = ble_.initialize();
   if (!ble_status) {
     ESP_LOGE("trainer_app", "BLE initialization failed: %s", ble_status.error->message.c_str());
@@ -1150,10 +1128,11 @@ void FirmwareApp::start() {
     return;
   }
   start_runtime_task();
-  if (!startup_sync_succeeded) {
-    sync_retry_.request(monotonic_ms());
-    ESP_LOGI("trainer_app", "automatic workout sync retry armed after startup");
-  }
+  // Reach the ready UI before any Wi-Fi/SNTP/HTTPS wait. The runtime task
+  // performs the same bounded sync sequence in the background, preserving
+  // cached/offline riding while avoiding a long startup splash screen.
+  sync_retry_.request(monotonic_ms());
+  ESP_LOGI("trainer_app", "automatic workout sync armed after startup");
 #else
   (void)storage_status;
 #endif
