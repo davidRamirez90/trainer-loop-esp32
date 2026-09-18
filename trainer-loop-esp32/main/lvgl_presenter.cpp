@@ -386,6 +386,7 @@ bool create_ui(LvglPresenter::Runtime* runtime) {
     if (runtime->objects.candidate_labels[index] == nullptr) return false;
     lv_obj_set_style_text_font(runtime->objects.candidate_labels[index], &lv_font_montserrat_14, LV_PART_MAIN);
     lv_obj_set_style_text_color(runtime->objects.candidate_labels[index], white, LV_PART_MAIN);
+    lv_obj_set_height(runtime->objects.candidate_labels[index], 42);
     lv_label_set_long_mode(runtime->objects.candidate_labels[index], LV_LABEL_LONG_CLIP);
     lv_obj_set_width(runtime->objects.candidate_labels[index], 320);
     lv_obj_set_style_pad_left(runtime->objects.candidate_labels[index], 6, LV_PART_MAIN);
@@ -806,11 +807,14 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
       char text[128];
       const char* name = candidate.name.empty() ? "Unnamed device" : candidate.name.c_str();
       const char* role = candidate.role == PeripheralRole::kTrainer ? "TRAINER" : "HR";
-      std::snprintf(text, sizeof(text), "%s  [%02X:%02X]  %d dBm  %s", name,
+      std::snprintf(text, sizeof(text), "%s  %s\n%02X:%02X:%02X:%02X:%02X:%02X  %d dBm", role, name,
+                    static_cast<unsigned>(candidate.address[0]),
+                    static_cast<unsigned>(candidate.address[1]),
+                    static_cast<unsigned>(candidate.address[2]),
+                    static_cast<unsigned>(candidate.address[3]),
                     static_cast<unsigned>(candidate.address[4]),
                     static_cast<unsigned>(candidate.address[5]),
-                    static_cast<int>(candidate.rssi),
-                    role);
+                    static_cast<int>(candidate.rssi));
       lv_label_set_text(runtime_->objects.candidate_labels[index], text);
       lv_obj_set_state(runtime_->objects.candidate_buttons[index], LV_STATE_DISABLED, false);
       lv_obj_remove_flag(runtime_->objects.candidate_buttons[index], LV_OBJ_FLAG_HIDDEN);

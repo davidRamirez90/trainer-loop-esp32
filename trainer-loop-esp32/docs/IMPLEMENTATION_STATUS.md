@@ -265,3 +265,9 @@ A static audit of the current `main/` and portable-core logging paths found no
 keys, Authorization headers, raw HTTP bodies, or setup tokens. Physical
 crash-output review remains open because it requires exercising the mounted
 device and its reset/recovery paths.
+
+The pairing rows now reserve two lines: the role and device name are shown
+first, followed by the complete address and RSSI. This keeps the selectable
+identity visible when several devices advertise similar names and avoids the
+previous last-two-byte, clipped single-line presentation. The change is
+render-only and does not alter address/type selection or connection policy.

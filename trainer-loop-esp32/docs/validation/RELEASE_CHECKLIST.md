@@ -422,3 +422,12 @@ history upload retry. Existing hardware ride and upload evidence remains
   was performed.
 - [ ] Supervised physical Devices-scan, touch/readability, explicit pairing,
   control acknowledgement, pause/stop safety, and endurance gates remain open.
+
+## Pending application checkpoint — pairing row identity layout
+
+- [x] Pairing candidates now show role/name on line one and the complete
+  address plus RSSI on line two, without changing explicit address/type
+  selection or BLE policy.
+- [x] Host, strict Clang, ASan/UBSan, and ESP-IDF validation pass; the pending
+  application image is `0x222fb0` bytes with 47% free.
+- [ ] Perform the application-only flash and physical readability/touch check.

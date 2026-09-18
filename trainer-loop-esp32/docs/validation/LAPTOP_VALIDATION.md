@@ -324,3 +324,14 @@ setup with no panic/watchdog output.
   `PAIRING | WAITING` transitions to a bounded scan automatically; Back must
   cancel the pending scan. Direct touch/readability, trainer/HR selection,
   control acknowledgements, safety, and endurance remain open.
+
+## Pending application checkpoint — pairing row identity layout
+
+- [x] Pairing candidates now render the role and name on the first line and
+  the complete address plus RSSI on the second line, within the existing 52 px
+  touch target.
+- [x] Host `make test`, Debug CMake/CTest 2/2, strict Clang `-Werror`, and a
+  clean ESP-IDF build pass. The image is `0x222fb0` bytes with `0x1dd050`
+  free (47%) before the final clean-commit rebuild.
+- [ ] Flash only application offset `0x20000`, then visually confirm the
+  two-line rows and their touch feedback on the physical display.
