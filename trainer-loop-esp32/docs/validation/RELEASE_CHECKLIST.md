@@ -10,8 +10,8 @@ security, or service validation.
 - [x] `make test` and explicit Debug CMake/build/CTest: 2/2 pass, including
   official Garmin FIT Python SDK 21.214.0 validation of four session fixtures.
 - [x] ESP-IDF build with runtime settings/retry, pairing-state handling,
-  post-ride UI updates and clarified sync errors: app `0x21ff10`, app partition
-  free `0x1e00f0` (47%);
+  post-ride UI updates, clarified sync errors and multiple-workout selection:
+  app `0x2207e0`, app partition free `0x1df820` (47%);
   bootloader `0x5160` with 36% free.
 - [x] Deterministic parser, clock, safety/replay, offline eligibility, upload
   failure/reboot, Retry-After rebasing, finalized-session enumeration,
