@@ -1,5 +1,6 @@
 void ui_settings_contracts() {
   using namespace trainer_loop;
+  assert(UiCommandType::kRetry != UiCommandType::kRetryUploads);
   std::uint64_t monotonic = 1000;
   TimeService time([&] { return monotonic; });
   assert(time.set_from_sntp(1700000000000LL));

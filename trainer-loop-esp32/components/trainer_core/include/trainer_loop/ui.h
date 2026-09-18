@@ -43,6 +43,7 @@ enum class UiCommandType : std::uint8_t {
   kOpenSettings,
   kNextWorkout,
   kRetry,
+  kRetryUploads,
   kSelectDevice,
   kProfileNext,
   kProfileDecrease,

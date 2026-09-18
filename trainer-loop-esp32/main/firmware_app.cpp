@@ -517,6 +517,22 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       sync_retry_.finish(now_ms, static_cast<bool>(status));
       break;
     }
+    case UiCommandType::kRetryUploads: {
+      if (!upload_queue_ready_) {
+        status = Status::failure(ErrorCode::kStorage, "Upload queue is unavailable");
+        break;
+      }
+      status = upload_queue_.retry_failed(now_ms);
+      if (status) {
+        // The worker normally waits for its one-second pacing interval. A
+        // manual retry is an explicit request to try as soon as the network
+        // is available, while still preserving ride and Retry-After guards in
+        // process_pending_upload().
+        next_upload_attempt_ms_ = now_ms;
+        ui_message_ = "Upload retry queued";
+      }
+      break;
+    }
     case UiCommandType::kOpenDevices:
       history_active_ = false;
       history_detail_active_ = false;

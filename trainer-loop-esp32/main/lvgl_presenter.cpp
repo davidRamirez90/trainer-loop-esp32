@@ -947,9 +947,9 @@ Status LvglPresenter::present(const UiSnapshot& snapshot) {
     lv_obj_set_width(runtime_->objects.action, 168);
     lv_obj_remove_flag(runtime_->objects.history_button, LV_OBJ_FLAG_HIDDEN);
     runtime_->history_context.command = snapshot.screen == UiScreen::kPaused
-        ? UiCommandType::kEndAndSave : UiCommandType::kRetry;
+        ? UiCommandType::kEndAndSave : UiCommandType::kRetryUploads;
     lv_label_set_text(runtime_->objects.history_button_label,
-                      snapshot.screen == UiScreen::kPaused ? "END & SAVE" : "RETRY");
+                      snapshot.screen == UiScreen::kPaused ? "END & SAVE" : "RETRY UPLOAD");
     lv_obj_set_state(runtime_->objects.history_button, LV_STATE_DISABLED, snapshot.busy);
   } else if ((snapshot.screen == UiScreen::kHome || snapshot.screen == UiScreen::kPreview) &&
              snapshot.next_workout_available) {
