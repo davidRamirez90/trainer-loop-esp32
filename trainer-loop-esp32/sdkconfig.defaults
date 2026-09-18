@@ -19,9 +19,10 @@ CONFIG_ESP_TASK_WDT_TIMEOUT_S=10
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 CONFIG_FREERTOS_HZ=1000
 
-# HTTPS runs while two NimBLE links and the LVGL display are active. Allocate
-# mbedTLS record buffers on demand so TLS setup does not reserve both full
-# fragments before the handshake needs them.
+# HTTPS runs while two NimBLE links and the LVGL display are active. Keep
+# mbedTLS allocations in PSRAM and allocate record buffers on demand so the
+# TLS handshake does not compete with BLE/display allocations in internal RAM.
+CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 CONFIG_MBEDTLS_DYNAMIC_BUFFER=y
 CONFIG_MBEDTLS_DYNAMIC_FREE_CONFIG_DATA=y
 
