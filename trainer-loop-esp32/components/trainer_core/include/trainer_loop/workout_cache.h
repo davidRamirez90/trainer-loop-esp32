@@ -28,6 +28,8 @@ class WorkoutCache {
 
   Status initialize();
   Status save(const CachedWorkout& cached);
+  Status replace_for_date(const std::string& local_date,
+                          const std::vector<CachedWorkout>& workouts);
   Result<CachedWorkout> load(const std::string& event_id) const;
   std::vector<CachedWorkout> list_for_date(const std::string& local_date) const;
 

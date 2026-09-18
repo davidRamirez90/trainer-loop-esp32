@@ -6,6 +6,7 @@
 #include "trainer_loop/telemetry.h"
 #include "trainer_loop/workout.h"
 
+#include <algorithm>
 #include <cerrno>
 #include <charconv>
 #include <cmath>
@@ -286,6 +287,54 @@ Status WorkoutCache::save(const CachedWorkout& cached) {
     return Status::failure(ErrorCode::kStorage, "cannot publish workout cache record");
   }
   return Status::ok();
+}
+
+Status WorkoutCache::replace_for_date(const std::string& local_date,
+                                      const std::vector<CachedWorkout>& workouts) {
+  if (local_date.empty() || local_date.size() > 16U) {
+    return Status::failure(ErrorCode::kInvalidArgument, "cache replacement date is invalid");
+  }
+  const Status initialized = initialize();
+  if (!initialized) return initialized;
+  std::vector<std::string> keep;
+  keep.reserve(workouts.size());
+  for (const CachedWorkout& cached : workouts) {
+    if (cached.local_date != local_date) {
+      return Status::failure(ErrorCode::kInvalidArgument,
+                             "cached workout date does not match replacement date");
+    }
+    if (std::find(keep.begin(), keep.end(), cached.event_id) != keep.end()) {
+      return Status::failure(ErrorCode::kInvalidArgument, "duplicate workout event in replacement");
+    }
+    keep.push_back(cached.event_id);
+  }
+
+  // Publish every new record before pruning old records. A failed download or
+  // write therefore never authorizes deletion of the prior day's cache.
+  for (const CachedWorkout& cached : workouts) {
+    const Status saved = save(cached);
+    if (!saved) return saved;
+  }
+
+  DIR* handle = ::opendir(directory_.c_str());
+  if (handle == nullptr) return Status::ok();
+  Status result = Status::ok();
+  while (const dirent* entry = ::readdir(handle)) {
+    const std::string filename(entry->d_name);
+    if (filename.size() <= 6U || filename.substr(filename.size() - 6U) != ".cache") continue;
+    const std::string event_id = filename.substr(0U, filename.size() - 6U);
+    const auto cached = load(event_id);
+    if (!cached || cached.value->local_date != local_date ||
+        std::find(keep.begin(), keep.end(), event_id) != keep.end()) {
+      continue;
+    }
+    if (::remove(path_for(event_id).c_str()) != 0) {
+      result = Status::failure(ErrorCode::kStorage, "cannot prune replaced workout cache");
+      break;
+    }
+  }
+  ::closedir(handle);
+  return result;
 }
 
 Result<CachedWorkout> WorkoutCache::load(const std::string& event_id) const {

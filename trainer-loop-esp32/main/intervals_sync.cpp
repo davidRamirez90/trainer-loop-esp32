@@ -113,6 +113,8 @@ Result<SyncMetadata> IntervalsSync::sync_today(const TimeService& time) {
   const auto supported = supported_today_events(remote_events, metadata.local_date);
   if (!supported) return Result<SyncMetadata>::failure(supported.error->code, supported.error->message);
   if (supported.value->empty()) {
+    const Status replaced = cache_->replace_for_date(metadata.local_date, {});
+    if (!replaced) return Result<SyncMetadata>::failure(replaced.error->code, replaced.error->message);
     if (synced_profile.ftp_watts != settings_->current().profile.ftp_watts ||
         synced_profile.rider_kg != settings_->current().profile.rider_kg) {
       const Status updated = settings_->update_profile(synced_profile, settings_->current().generation);
@@ -154,10 +156,8 @@ Result<SyncMetadata> IntervalsSync::sync_today(const TimeService& time) {
     cached.validated_utc_ms = time.snapshot().utc_ms;
     pending.push_back(std::move(cached));
   }
-  for (const auto& cached : pending) {
-    const Status saved = cache_->save(cached);
-    if (!saved) return Result<SyncMetadata>::failure(saved.error->code, saved.error->message);
-  }
+  const Status replaced = cache_->replace_for_date(metadata.local_date, pending);
+  if (!replaced) return Result<SyncMetadata>::failure(replaced.error->code, replaced.error->message);
   if (synced_profile.ftp_watts != settings_->current().profile.ftp_watts ||
       synced_profile.rider_kg != settings_->current().profile.rider_kg) {
     const Status updated = settings_->update_profile(synced_profile, settings_->current().generation);

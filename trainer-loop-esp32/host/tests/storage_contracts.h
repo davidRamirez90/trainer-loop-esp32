@@ -94,6 +94,21 @@ void storage_contracts() {
   storage_test_write_budget.reset();
   assert(WorkoutCache(root + "/cache").load("offline").value->name == "Offline");
   assert(cache.list_for_date("2026-09-17").size() == 1);
+  auto stale = cached;
+  stale.event_id = "stale";
+  stale.name = "Stale";
+  stale.workout.name = stale.name;
+  assert(cache.save(stale));
+  assert(cache.list_for_date("2026-09-17").size() == 2);
+  storage_test_write_budget = 0;
+  assert(!cache.replace_for_date("2026-09-17", {cached}));
+  storage_test_write_budget.reset();
+  assert(cache.list_for_date("2026-09-17").size() == 2);
+  assert(cache.replace_for_date("2026-09-17", {cached}));
+  assert(cache.list_for_date("2026-09-17").size() == 1);
+  assert(!cache.load("stale"));
+  assert(cache.replace_for_date("2026-09-17", {}));
+  assert(cache.list_for_date("2026-09-17").empty());
   assert(!check_storage_capacity(root, UINT64_MAX).enough);
 
   UploadQueue queue(root + "/queue");
