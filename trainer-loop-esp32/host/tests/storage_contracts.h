@@ -109,6 +109,10 @@ void storage_contracts() {
   assert(!cache.load("stale"));
   assert(cache.replace_for_date("2026-09-17", {}));
   assert(cache.list_for_date("2026-09-17").empty());
+  assert(!cache.replace_for_date("2026-09-18", {cached}));
+  WorkoutCache empty_cache(root + "/empty-cache");
+  assert(empty_cache.replace_for_date("2026-09-18", {}));
+  assert(empty_cache.list_for_date("2026-09-18").empty());
   assert(!check_storage_capacity(root, UINT64_MAX).enough);
 
   UploadQueue queue(root + "/queue");
