@@ -67,7 +67,7 @@ are prior board observations, not new hardware results from this phase.
 
 `make test`, explicit Debug CMake build and CTest pass (2/2, including the
 external SDK validator). The final laptop-only `idf.py build` also passes: app
-`0x21c5d0`, free `0x1e3a30` (47%) in the current app partition; bootloader
+`0x21fa90`, free `0x1e0570` (47%) in the current app partition; bootloader
 `0x5160` with 36% free. No physical acceptance gate is closed by these results.
 Full evidence, limitations, changed-file groups and the exact home sequence:
 [Laptop validation](validation/LAPTOP_VALIDATION.md).
@@ -94,3 +94,29 @@ BLE was not initialized on the unprovisioned path. Private web setup must be
 completed before scanning the trainer or HR monitor; no resistance workout is
 authorized until FTMS/HR telemetry, acknowledgements and pause/stop behavior
 are separately validated.
+
+## UI and live-service follow-up — 2026-09-18
+
+The first supervised ride confirmed trainer ERG control, pause/resume, Garmin
+heart-rate telemetry, local history creation, and an uploaded Intervals.icu
+activity. The observed UI issues were stale post-save timing, ambiguous End &
+Save feedback, duplicate Devices actions, small pairing/history targets,
+non-actionable history rows, and a pairing scan error while automatic GATT
+setup was still in progress.
+
+The implementation now freezes the completed-session clock, presents a static
+RIDE SAVED summary, exposes clickable history rows and a detail view, keeps one
+Devices entry, uses larger pairing/history buttons, and reports the BLE setup
+conflict as a retryable state instead of leaving the screen apparently locked.
+The completion and history detail views also distinguish uploaded, pending,
+retrying, blocked, and failed upload states.
+
+Checkpoint `f210f62` was built and flashed to the application slot only at
+`0x20000` (SHA-256
+`df80659de6a1f349dda44b8bc07d207db8126153f175e1779f63e2c08d5158d8`). A
+bounded monitor window confirmed app version `f210f62`, the project partition
+table, LittleFS mount, LVGL readiness, Wi-Fi recovery, three Intervals HTTP 200
+responses, and no panic/watchdog. The remaining work is physical acceptance of
+the updated touch flow, exact trainer/HR pairing, safe ERG acknowledgements,
+ride completion/history navigation, and the release-gate endurance and
+reconnect tests in the checklist.
