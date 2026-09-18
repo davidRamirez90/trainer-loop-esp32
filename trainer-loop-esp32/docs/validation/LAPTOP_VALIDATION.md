@@ -212,12 +212,24 @@ concurrent-connect deferral appeared during the observed startup window. This
 is a targeted ESP-only regression fix; the host suite and Debug CTest had
 already passed on the source checkpoint before the ESP build.
 
+Checkpoint `2fba6d3` sorts same-day cached workouts by durable event ID so the
+Home/Preview **NEXT** order is stable across filesystem enumeration and reboot.
+The test-first host coverage saves two records in reverse creation order and
+checks the public `list_for_date` result. The clean ESP-IDF image is
+`0x2220a0` bytes with `0x1ddf60` free (47%); SHA-256 is
+`b323236c9e996f668a9922e8e9df66a142f1cf1020e79499a9433c598e0bb646`.
+Only application offset `0x20000` was written. The bounded monitor identified
+app version `2fba6d3`, the expected project partition table, LittleFS/LVGL
+startup, automatic Wi-Fi recovery, three Intervals HTTP 200 responses and
+BLE/GATT setup with no panic/watchdog output or concurrent-connect deferral in
+the observed window.
+
 ## Exact home testing sequence (deferred)
 
 1. **Do not re-provision.** Bring the existing board, exact Zwift Hub One and
    Garmin strap home. Record their firmware/model identities. Keep a rider able
    to stop pedaling immediately and use low workloads for all initial tests.
-2. The board now runs checkpoint `23ac626` from an application-only write at
+2. The board now runs checkpoint `2fba6d3` from an application-only write at
    `0x20000`; existing NVS and storage were left untouched, and no
    credential-bearing backup was made. Never use `erase-flash`, change security
    settings, or re-provision as part of this validation record.

@@ -217,3 +217,16 @@ A live camera spot-check of the flashed image shows the compact connection line
 and four Home action tiles inside the display bezel with no obvious clipping.
 This is visual evidence only; direct touch targets, readability under intended
 lighting, and the pairing/reconnect workflow still require hands-on acceptance.
+
+Checkpoint `2fba6d3` makes `list_for_date` sort cached workouts by durable event
+ID, so the Home/Preview **NEXT** order is stable across filesystem enumeration
+and reboot. Test-first coverage saves two same-day records in reverse creation
+order and verifies deterministic ordering. The clean ESP-IDF image is
+`0x2220a0` bytes with `0x1ddf60` free (47%); SHA-256 is
+`b323236c9e996f668a9922e8e9df66a142f1cf1020e79499a9433c598e0bb646`.
+Only application offset `0x20000` was written. The bounded monitor identified
+app version `2fba6d3`, the expected project partition table, LittleFS/LVGL
+readiness, automatic Wi-Fi recovery, three Intervals HTTP 200 responses and
+BLE/GATT setup with no panic/watchdog output or concurrent-connect deferral in
+the observed window. Physical selection, touch/readability, control-safety,
+and endurance gates remain open.

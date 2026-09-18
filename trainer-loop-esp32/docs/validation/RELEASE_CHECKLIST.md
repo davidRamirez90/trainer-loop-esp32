@@ -369,3 +369,19 @@ history upload retry. Existing hardware ride and upload evidence remains
   and HR pairing by explicit address/type, control acknowledgements, pause and
   stop safety, cache replacement using the real account, touch/readability,
   and endurance. The RTC oscillator-stop warning remains a time-validity gate.
+
+## Latest application-only validation — 2026-09-18
+
+- [x] Application checkpoint `2fba6d3` was built from a clean Git commit and
+  flashed only to application offset `0x20000`; esptool wrote `0x2220a0` bytes
+  and verified SHA-256
+  `b323236c9e996f668a9922e8e9df66a142f1cf1020e79499a9433c598e0bb646`.
+  No bootloader, partition table, NVS, or LittleFS storage write was made.
+- [x] The image adds deterministic same-day cache ordering, covered by a
+  public-interface host test. Boot evidence identified app version `2fba6d3`,
+  the expected partition table, LittleFS/LVGL startup, automatic Wi-Fi
+  recovery, three Intervals HTTP 200 responses and BLE/GATT setup with no
+  panic/watchdog or concurrent-connect deferral in the observed window.
+- [ ] Physical acceptance remains open for the real-account cache selection,
+  scan/reconnect behavior, explicit trainer/HR pairing, control acknowledgements,
+  pause/stop safety, touch/readability, and endurance.
