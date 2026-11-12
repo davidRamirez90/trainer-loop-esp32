@@ -1,0 +1,17 @@
+{
+  "name": "natural completion freezes session time while controller stop is pending",
+  "fit_globs": ["fit/*.fit"],
+  "steps": [
+    {"command":{"op":"http","method":"GET","path":"/api/v1/athlete/sim-athlete/events","status":200,"body":"[{\"id\":\"short\",\"name\":\"Short Test\",\"start_date_local\":\"2026-09-30T08:00:00\",\"sport\":\"Ride\"}]"}},
+    {"command":{"op":"http","method":"GET","path":"/api/v1/athlete/sim-athlete/events/short/download.zwo","status":200,"body":"<?xml version=\"1.0\"?><workout_file><name>Short Test</name><workout><SteadyState Duration=\"6\" Power=\"0.65\"/></workout></workout_file>"}},
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"click","control_id":"workout-card"}},
+    {"command":{"op":"click","text":"START WORKOUT"},"expect":{"ride_state":"Running","workout":"Short Test"}},
+    {"command":{"op":"ftms","delay_ms":250}},
+    {"command":{"op":"advance","ms":7000},"expect":{"ride_state":"Complete","elapsed_active_ms":{"op":"lte","value":6200},"elapsed_wall_ms":{"op":"lte","value":6200},"samples":{"op":"max_active_lte","value":6200}}}
+  ]
+}

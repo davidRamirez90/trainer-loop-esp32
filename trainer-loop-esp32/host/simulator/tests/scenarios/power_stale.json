@@ -1,0 +1,14 @@
+{
+  "name": "stale trainer telemetry triggers a safety pause",
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"click","control_id":"workout-card"}},
+    {"command":{"op":"click","text":"START WORKOUT"},"expect":{"ride_state":"Running"}},
+    {"command":{"op":"device","role":"trainer","telemetry":false}},
+    {"command":{"op":"advance","ms":3200},"expect":{"ride_state":"Paused","pause_reason":"power_stale"}}
+  ]
+}

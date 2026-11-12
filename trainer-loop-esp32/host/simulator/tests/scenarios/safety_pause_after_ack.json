@@ -1,0 +1,17 @@
+{
+  "name": "stale power during an FTMS target ACK sends a safety pause after that ACK",
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"click","control_id":"workout-card"}},
+    {"command":{"op":"click","text":"START WORKOUT"},"expect":{"ride_state":"Running"}},
+    {"command":{"op":"advance","ms":900}},
+    {"command":{"op":"device","role":"trainer","telemetry":false}},
+    {"command":{"op":"advance","ms":2200}},
+    {"command":{"op":"ftms","delay_ms":1500}},
+    {"command":{"op":"advance","ms":800},"expect":{"ride_state":"Paused","pause_reason":"power_stale","resistance_unknown":false,"platform_trace":{"op":"ordered_contains","value":["ftms.ack opcode=5","ftms.ack opcode=8"]}}}
+  ]
+}

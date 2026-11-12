@@ -26,6 +26,7 @@ enum class UiScreen : std::uint8_t {
   kActive,
   kPaused,
   kStopConfirmation,
+  kDiscardConfirmation,
   kCompletion,
   kUploadStatus,
   kHistory,
@@ -36,11 +37,14 @@ enum class UiScreen : std::uint8_t {
 
 enum class UiCommandType : std::uint8_t {
   kBack,
+  kOpenWorkoutPreview,
   kStart,
   kPause,
   kResume,
   kEndAndSave,
   kOpenStopConfirmation,
+  kOpenDiscardConfirmation,
+  kDiscardWorkout,
   kOpenDevices,
   kOpenHistory,
   kOpenHistoryEntry,
@@ -127,6 +131,7 @@ struct UiSnapshot {
   bool pause_available = false;
   bool resume_available = false;
   bool end_save_available = false;
+  bool discard_available = false;
   bool start_available = false;
   bool devices_available = false;
   bool history_available = false;
@@ -147,6 +152,8 @@ const char* compact_link_state_label(const std::string& status);
 std::string ui_feedback_message(const UiSnapshot& snapshot);
 UiSnapshot make_ui_snapshot(const CoordinatorSnapshot& coordinator, const Workout* workout = nullptr);
 UiSnapshot make_stop_confirmation_snapshot(UiSnapshot snapshot);
+UiSnapshot make_discard_confirmation_snapshot(UiSnapshot snapshot);
+std::uint32_t stop_confirmation_duration_ms(const UiSnapshot& snapshot);
 const char* ui_screen_name(UiScreen screen);
 
 }  // namespace trainer_loop

@@ -1,0 +1,17 @@
+{
+  "name": "two-interval Intervals workout progresses and completes through the production runtime",
+  "fit_globs": ["fit/*.fit"],
+  "steps": [
+    {"command":{"op":"http","method":"GET","path":"/api/v1/athlete/sim-athlete/events","status":200,"body":"[{\"id\":\"two-step\",\"name\":\"Two Step\",\"start_date_local\":\"2026-09-30T08:00:00\",\"sport\":\"Ride\"}]"}},
+    {"command":{"op":"http","method":"GET","path":"/api/v1/athlete/sim-athlete/events/two-step/download.zwo","status":200,"body":"<?xml version=\"1.0\"?><workout_file><name>Two Step</name><workout><Warmup Duration=\"3\" PowerLow=\"0.5\" PowerHigh=\"0.7\"/><SteadyState Duration=\"3\" Power=\"0.8\"/></workout></workout_file>"}},
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"click","control_id":"workout-card"}},
+    {"command":{"op":"click","text":"START WORKOUT"},"expect":{"ride_state":"Running","workout":"Two Step","interval_index":0}},
+    {"command":{"op":"advance","ms":3500},"expect":{"ride_state":"Running","interval_index":1}},
+    {"command":{"op":"advance","ms":4000},"expect":{"ride_state":"Complete","elapsed_active_ms":{"op":"lte","value":6200}}}
+  ]
+}

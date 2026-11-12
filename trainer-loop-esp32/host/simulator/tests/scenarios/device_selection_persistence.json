@@ -1,0 +1,12 @@
+{
+  "name": "paired trainer identity and its NVS generation survive restart",
+  "steps": [
+    {"command":{"op":"setup"},"expect":{"ride_state":"Ready"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100},"expect":{"trainer_status":"Trainer connected","devices.0.connected":true,"devices.0.generation":{"op":"gt","value":0}}},
+    {"command":{"op":"restart"}},
+    {"command":{"op":"advance","ms":100},"expect":{"trainer_status":"Trainer connected","devices.0.connected":true,"devices.0.generation":{"op":"gt","value":0}}}
+  ]
+}

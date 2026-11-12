@@ -1,0 +1,16 @@
+{
+  "name": "production BOOT short gesture navigates safely without provisioning side effects",
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000},"expect":{"screen":"Home","workout":"Local Endurance"}},
+    {"command":{"op":"boot","pressed":true}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"boot","pressed":false}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"advance","ms":100},"expect":{"screen":"Home","trace":{"op":"any_contains","value":"boot.short_press"}}},
+    {"command":{"op":"boot","pressed":true}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"advance","ms":1600},"expect":{"screen":"Home","trace":{"op":"any_contains","value":"boot.long_press_ignored"}}}
+  ]
+}

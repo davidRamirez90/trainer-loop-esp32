@@ -46,3 +46,8 @@ set(FIT_PYTHON "${CMAKE_SOURCE_DIR}/.venv-fit/bin/python" CACHE FILEPATH "Python
 add_test(NAME independent_fit_validation COMMAND "${FIT_PYTHON}"
   "${CMAKE_CURRENT_SOURCE_DIR}/tests/validate_fit.py" "$<TARGET_FILE:fit_fixtures>"
   "${CMAKE_BINARY_DIR}/fit-validation")
+
+option(TRAINER_LOOP_BUILD_SIMULATOR "Build native production application simulator" OFF)
+if(TRAINER_LOOP_BUILD_SIMULATOR)
+  add_subdirectory(simulator)
+endif()

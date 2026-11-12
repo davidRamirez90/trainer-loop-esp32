@@ -194,13 +194,16 @@ bool fit_profile_definitions_are_valid(const std::vector<std::uint8_t>& bytes) {
 }
 
 std::string temporary_directory() {
-  char pattern[] = "/tmp/trainer-loop-test-XXXXXX";
-  const int descriptor = ::mkstemp(pattern);
+  const std::string prefix =
+      (std::filesystem::temp_directory_path() / "trainer-loop-test-XXXXXX").string();
+  std::vector<char> pattern(prefix.begin(), prefix.end());
+  pattern.push_back('\0');
+  const int descriptor = ::mkstemp(pattern.data());
   assert(descriptor >= 0);
   ::close(descriptor);
-  assert(std::remove(pattern) == 0);
-  assert(::mkdir(pattern, 0700) == 0);
-  return pattern;
+  assert(std::remove(pattern.data()) == 0);
+  assert(::mkdir(pattern.data(), 0700) == 0);
+  return pattern.data();
 }
 
 }  // namespace
@@ -572,6 +575,14 @@ int main() {
 
   const auto ui = trainer_loop::make_ui_snapshot(coordinator.snapshot(), nullptr);
   assert(ui.safety_message.find("Power stale") != std::string::npos);
+
+  assert(coordinator.discard(9000U));
+  assert(coordinator.snapshot().state == trainer_loop::RideState::kPreview);
+  assert(!coordinator_journal.has_current_session());
+  assert(coordinator.select_workout(make_workout(), profile, false));
+  sensors = fresh_sensors(10000U);
+  assert(coordinator.start(10000U, {1700000005000LL, true, 1U}, sensors, true, "first-athlete"));
+
   const auto first_workout = trainer_loop::next_today_workout({0U, 3U});
   assert(first_workout.index == 1U && first_workout.count == 3U);
   const auto wrapped_workout = trainer_loop::next_today_workout({2U, 3U});

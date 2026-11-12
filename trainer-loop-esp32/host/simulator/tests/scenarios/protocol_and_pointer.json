@@ -1,0 +1,16 @@
+{
+  "name": "real pointer input navigates LVGL and malformed protocol inputs return bounded errors",
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000},"expect":{"screen":"Home","workout":"Local Endurance"}},
+    {"command":{"op":"touch","x":184,"y":420,"pressed":true}},
+    {"command":{"op":"touch","x":190,"y":420,"pressed":true}},
+    {"command":{"op":"touch","x":190,"y":420,"pressed":false},"expect":{"screen":"Home"}},
+    {"command":{"op":"touch","x":-1,"y":20,"pressed":true},"error":"x is outside its integer range"},
+    {"command":{"op":"click","text":"missing control"},"error":"visible control not found"},
+    {"command":{"op":"op-does-not-exist"},"error":"unknown op"},
+    {"command":{"op":"touch","x":184,"y":149,"pressed":true}},
+    {"command":{"op":"touch","x":190,"y":155,"pressed":true}},
+    {"command":{"op":"touch","x":190,"y":155,"pressed":false},"expect":{"screen":"Workout Preview","workout":"Local Endurance"}}
+  ]
+}

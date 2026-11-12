@@ -1,0 +1,11 @@
+{
+  "name": "heart-rate pairing uses the real discovery and telemetry path",
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"DEVICES"},"expect":{"screen":"Pairing"}},
+    {"command":{"op":"click","text":"Heart rate  |  Trainer Loop HR\nSignal -44 dBm"}},
+    {"command":{"op":"advance","ms":100},"expect":{"heart_rate_status":"HR connected","screen":"Home"}},
+    {"command":{"op":"state"},"expect":{"trainer_status":"Trainer disconnected","devices.1.connected":true}}
+  ]
+}

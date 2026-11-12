@@ -114,9 +114,7 @@ Status SessionCoordinator::start(std::uint64_t now_ms, StartTimeAnchor anchor,
   if (!trainer_capabilities_.has_value()) {
     return Status::failure(ErrorCode::kUnsupported, "trainer power capabilities are unavailable");
   }
-  if (trainer_ == nullptr || sensors.trainer_link != LinkState::kConnected ||
-      !sensors.telemetry_subscription ||
-      !sensors.power_w.fresh(now_ms, kPowerStaleAfterMs)) {
+  if (trainer_ == nullptr || !trainer_inputs_fresh(sensors, now_ms)) {
     return Status::failure(ErrorCode::kTransport, "fresh trainer power and telemetry are required");
   }
   const Status range_status = validate_workout_power_range(workout_, profile_.ftp_watts, *trainer_capabilities_);
@@ -126,18 +124,56 @@ Status SessionCoordinator::start(std::uint64_t now_ms, StartTimeAnchor anchor,
   const auto restart = restart_target(interval_target);
   if (!restart) return Status::failure(restart.error->code, restart.error->message);
   const int safe_restart_target = *restart.value;
+  const std::uint64_t requested_start_ms = now_ms;
+  last_wait_now_ms_ = now_ms;
   Status status = trainer_->acquire_control();
   if (!status) return status;
+  now_ms = std::max(now_ms, last_wait_now_ms_);
+  snapshot_.now_ms = now_ms;
+  snapshot_.sensors = sensors;
+  if (!trainer_inputs_fresh(sensors, now_ms)) {
+    (void)trainer_->stop();
+    return Status::failure(ErrorCode::kTransport,
+                           "fresh trainer power was lost while acquiring control");
+  }
   status = trainer_->set_target_power(safe_restart_target);
   if (!status) {
     (void)trainer_->stop();
     return status;
+  }
+  now_ms = std::max(now_ms, last_wait_now_ms_);
+  snapshot_.now_ms = now_ms;
+  snapshot_.sensors = sensors;
+  if (!trainer_inputs_fresh(sensors, now_ms)) {
+    (void)trainer_->stop();
+    return Status::failure(ErrorCode::kTransport,
+                           "fresh trainer power was lost while setting resistance");
   }
   status = trainer_->start_or_resume();
   if (!status) {
     (void)trainer_->stop();
     return status;
   }
+  const std::uint64_t start_now_ms = std::max(now_ms, last_wait_now_ms_);
+  snapshot_.now_ms = start_now_ms;
+  snapshot_.sensors = sensors;
+  if (!trainer_inputs_fresh(sensors, start_now_ms)) {
+    const Status stopped = trainer_->stop();
+    snapshot_.resistance_unknown = !stopped ||
+                                   sensors.trainer_link != LinkState::kConnected;
+    return Status::failure(ErrorCode::kTransport,
+                           "fresh trainer power was lost while starting the workout");
+  }
+  if (anchor.trusted && start_now_ms > requested_start_ms) {
+    const std::uint64_t elapsed = start_now_ms - requested_start_ms;
+    const std::int64_t signed_elapsed = elapsed > static_cast<std::uint64_t>(INT64_MAX)
+                                            ? INT64_MAX
+                                            : static_cast<std::int64_t>(elapsed);
+    anchor.utc_ms = anchor.utc_ms > INT64_MAX - signed_elapsed
+                        ? INT64_MAX
+                        : anchor.utc_ms + signed_elapsed;
+  }
+  now_ms = start_now_ms;
 
   session_uuid_ = make_session_uuid(now_ms);
   buffered_samples_.clear();
@@ -184,6 +220,8 @@ Status SessionCoordinator::start(std::uint64_t now_ms, StartTimeAnchor anchor,
   snapshot_.target_power_w = safe_restart_target;
   stop_event_appended_ = false;
   finishing_interrupted_ = false;
+  finish_pending_ = false;
+  safety_pause_pending_ = false;
   return Status::ok();
 }
 
@@ -192,6 +230,10 @@ Status SessionCoordinator::tick(std::uint64_t now_ms, const SensorSnapshot& sens
   snapshot_.sensors = sensors;
   snapshot_.clocks = clocks_.snapshot(now_ms);
   if (state_ != RideState::kRunning) return Status::ok();
+  if (finish_pending_) {
+    finish_pending_ = false;
+    return finish(now_ms, false);
+  }
   if (sensors.trainer_link != LinkState::kConnected) {
     return pause(PauseReason::kTrainerDisconnected, now_ms);
   }
@@ -213,12 +255,120 @@ Status SessionCoordinator::tick(std::uint64_t now_ms, const SensorSnapshot& sens
                                                      (interval_target - last_commanded_target_w_) * std::clamp(ratio, 0.0, 1.0)));
   }
   if (commanded_target != last_commanded_target_w_ || now_ms >= next_sample_due_ms_) {
+    last_wait_now_ms_ = now_ms;
     const Status command = trainer_->set_target_power(commanded_target);
+    now_ms = std::max(now_ms, last_wait_now_ms_);
+    snapshot_.now_ms = now_ms;
+    snapshot_.clocks = clocks_.snapshot(now_ms);
+    if (state_ != RideState::kRunning) {
+      return safety_pause_pending_ ? finish_deferred_safety_pause(now_ms) : Status::ok();
+    }
+    if (finish_pending_) {
+      finish_pending_ = false;
+      return finish(now_ms, false);
+    }
     if (!command) return pause(PauseReason::kCommandFailure, now_ms);
     last_commanded_target_w_ = commanded_target;
     snapshot_.target_power_w = commanded_target;
   }
+  if (state_ != RideState::kRunning) return Status::ok();
+  if (finish_pending_) {
+    finish_pending_ = false;
+    return finish(now_ms, false);
+  }
+  const Status sampled = record_sample(now_ms, sensors, commanded_target);
+  if (!sampled) return pause(PauseReason::kStorageFailure, now_ms);
+  if (clocks_.snapshot(now_ms).plan_ms >= workout_.duration_ms()) {
+    if (clocks_.running()) (void)clocks_.finish(now_ms);
+    snapshot_.clocks = clocks_.snapshot(now_ms);
+    finish_pending_ = false;
+    return finish(now_ms, false);
+  }
+  return Status::ok();
+}
+
+Status SessionCoordinator::tick_control_suppressed(std::uint64_t now_ms,
+                                                    const SensorSnapshot& sensors) {
+  last_wait_now_ms_ = std::max(last_wait_now_ms_, now_ms);
+  snapshot_.now_ms = now_ms;
+  snapshot_.sensors = sensors;
+  snapshot_.clocks = clocks_.snapshot(now_ms);
+  if (state_ != RideState::kRunning || !clocks_.running()) return Status::ok();
+  if (sensors.trainer_link != LinkState::kConnected) {
+    return pause_without_controller(PauseReason::kTrainerDisconnected, now_ms);
+  }
+  if (!sensors.telemetry_subscription || !sensors.power_w.fresh(now_ms, kPowerStaleAfterMs)) {
+    return pause_without_controller(PauseReason::kPowerStale, now_ms);
+  }
+  const ClockSnapshot clocks = clocks_.snapshot(now_ms);
+  const Status sampled = record_sample(now_ms, sensors, std::max(0, last_commanded_target_w_));
+  if (!sampled) return pause_without_controller(PauseReason::kStorageFailure, now_ms);
+  if (clocks.plan_ms >= workout_.duration_ms()) {
+    if (clocks_.running()) (void)clocks_.finish(now_ms);
+    snapshot_.clocks = clocks_.snapshot(now_ms);
+    finish_pending_ = true;
+  }
+  return Status::ok();
+}
+
+Status SessionCoordinator::pause_without_controller(PauseReason reason,
+                                                     std::uint64_t now_ms) {
+  if (state_ != RideState::kRunning) return Status::ok();
+  if (clocks_.running()) {
+    const Status paused = clocks_.pause(now_ms);
+    if (!paused) return paused;
+  }
+  state_ = RideState::kPaused;
+  safety_pause_pending_ = true;
+  snapshot_.state = state_;
+  snapshot_.pause_reason = reason;
+  snapshot_.resistance_unknown = true;
+  snapshot_.fault = reason == PauseReason::kTrainerDisconnected
+                        ? "Trainer link lost during controller wait"
+                        : reason == PauseReason::kPowerStale
+                              ? "Fresh trainer power lost during controller wait"
+                              : "Session storage failed during controller wait";
+  const Status event = append_event(
+      reason == PauseReason::kTrainerDisconnected
+          ? SessionEvent::Type::kTrainerDisconnected : SessionEvent::Type::kPause,
+      now_ms, pause_reason_name(reason));
+  if (!event) return event;
+  const Status flushed = flush_samples();
+  if (!flushed) return flushed;
+  snapshot_.now_ms = now_ms;
+  snapshot_.clocks = clocks_.snapshot(now_ms);
+  snapshot_.sensors.trainer_link = reason == PauseReason::kTrainerDisconnected
+                                       ? LinkState::kDisconnected : snapshot_.sensors.trainer_link;
+  return Status::ok();
+}
+
+Status SessionCoordinator::finish_deferred_safety_pause(std::uint64_t now_ms) {
+  if (!safety_pause_pending_ || state_ != RideState::kPaused) return Status::ok();
+  safety_pause_pending_ = false;
+  last_wait_now_ms_ = now_ms;
+  Status paused = trainer_ == nullptr
+                      ? Status::failure(ErrorCode::kTransport, "trainer controller is missing")
+                      : trainer_->pause();
+  now_ms = std::max(now_ms, last_wait_now_ms_);
+  snapshot_.now_ms = now_ms;
+  snapshot_.clocks = clocks_.snapshot(now_ms);
+  snapshot_.resistance_unknown = snapshot_.pause_reason == PauseReason::kTrainerDisconnected ||
+                                 !paused;
+  snapshot_.fault = paused ? "" : paused.error->message;
+  return paused;
+}
+
+bool SessionCoordinator::trainer_inputs_fresh(const SensorSnapshot& sensors,
+                                               std::uint64_t now_ms) const {
+  return sensors.trainer_link == LinkState::kConnected &&
+         sensors.telemetry_subscription &&
+         sensors.power_w.fresh(now_ms, kPowerStaleAfterMs);
+}
+
+Status SessionCoordinator::record_sample(std::uint64_t now_ms, const SensorSnapshot& sensors,
+                                         int commanded_target_w) {
   if (now_ms < next_sample_due_ms_) return Status::ok();
+  const ClockSnapshot clocks = clocks_.snapshot(now_ms);
   next_sample_due_ms_ = saturating_add(now_ms, kSamplePeriodMs);
   VirtualPoint point;
   if (simulator_.has_value()) point = simulator_->tick(clocks.plan_ms, sensors.power_w.value, true);
@@ -229,7 +379,7 @@ Status SessionCoordinator::tick(std::uint64_t now_ms, const SensorSnapshot& sens
   sample.active_ms = clocks.active_ms;
   sample.plan_ms = clocks.plan_ms;
   sample.power_w = static_cast<std::int16_t>(std::clamp(sensors.power_w.value, -32768, 32767));
-  sample.target_w = static_cast<std::uint16_t>(std::clamp(commanded_target, 0, 65535));
+  sample.target_w = static_cast<std::uint16_t>(std::clamp(commanded_target_w, 0, 65535));
   sample.cadence_half_rpm = cadence_raw(sensors, now_ms);
   sample.heart_rate_bpm = hr_fresh ? static_cast<std::uint16_t>(std::clamp(sensors.heart_rate_bpm.value, 0, 65535)) : 0U;
   sample.validity = kSamplePowerValid | kSampleTrainerLink;
@@ -248,9 +398,8 @@ Status SessionCoordinator::tick(std::uint64_t now_ms, const SensorSnapshot& sens
   snapshot_.clocks = clocks;
   if (buffered_samples_.size() >= 5U) {
     const Status flushed = flush_samples();
-    if (!flushed) return pause(PauseReason::kStorageFailure, now_ms);
+    if (!flushed) return flushed;
   }
-  if (clocks.plan_ms >= workout_.duration_ms()) return finish(now_ms, false);
   return Status::ok();
 }
 
@@ -258,7 +407,9 @@ Status SessionCoordinator::pause(PauseReason reason, std::uint64_t now_ms) {
   if (state_ != RideState::kRunning) return Status::failure(ErrorCode::kConflict, "ride is not running");
   const Status clock_status = clocks_.pause(now_ms);
   if (!clock_status) return clock_status;
+  last_wait_now_ms_ = now_ms;
   Status controller_status = trainer_ == nullptr ? Status::failure(ErrorCode::kTransport, "trainer controller is missing") : trainer_->pause();
+  now_ms = std::max(now_ms, last_wait_now_ms_);
   state_ = RideState::kPaused;
   snapshot_.state = state_;
   snapshot_.pause_reason = reason;
@@ -279,13 +430,20 @@ Status SessionCoordinator::pause(PauseReason reason, std::uint64_t now_ms) {
 
 Status SessionCoordinator::resume(std::uint64_t now_ms, const SensorSnapshot& sensors) {
   if (state_ != RideState::kPaused) return Status::failure(ErrorCode::kConflict, "ride is not paused");
-  if (trainer_ == nullptr || sensors.trainer_link != LinkState::kConnected ||
-      !sensors.telemetry_subscription ||
-      !sensors.power_w.fresh(now_ms, kPowerStaleAfterMs) || !trainer_capabilities_.has_value()) {
+  if (trainer_ == nullptr || !trainer_inputs_fresh(sensors, now_ms) ||
+      !trainer_capabilities_.has_value()) {
     return Status::failure(ErrorCode::kTransport, "resume requires fresh trainer power and link");
   }
+  last_wait_now_ms_ = now_ms;
   Status status = trainer_->acquire_control();
   if (!status) return status;
+  now_ms = std::max(now_ms, last_wait_now_ms_);
+  snapshot_.now_ms = now_ms;
+  snapshot_.sensors = sensors;
+  if (!trainer_inputs_fresh(sensors, now_ms)) {
+    return Status::failure(ErrorCode::kTransport,
+                           "fresh trainer power was lost while reacquiring control");
+  }
   const ClockSnapshot clocks = clocks_.snapshot(now_ms);
   const auto target_result = quantized_target(static_cast<int>(std::lround(midpoint(
       resolved_target_range_at(workout_, clocks.plan_ms, profile_.ftp_watts)))));
@@ -298,10 +456,33 @@ Status SessionCoordinator::resume(std::uint64_t now_ms, const SensorSnapshot& se
     (void)trainer_->stop();
     return status;
   }
+  now_ms = std::max(now_ms, last_wait_now_ms_);
+  snapshot_.now_ms = now_ms;
+  snapshot_.sensors = sensors;
+  if (!trainer_inputs_fresh(sensors, now_ms)) {
+    return Status::failure(ErrorCode::kTransport,
+                           "fresh trainer power was lost while setting resume resistance");
+  }
   status = trainer_->start_or_resume();
   if (!status) {
     (void)trainer_->stop();
     return status;
+  }
+  now_ms = std::max(now_ms, last_wait_now_ms_);
+  snapshot_.now_ms = now_ms;
+  snapshot_.sensors = sensors;
+  if (!trainer_inputs_fresh(sensors, now_ms)) {
+    const Status paused = trainer_->pause();
+    now_ms = std::max(now_ms, last_wait_now_ms_);
+    snapshot_.now_ms = now_ms;
+    snapshot_.sensors = sensors;
+    snapshot_.resistance_unknown = !paused ||
+                                   sensors.trainer_link != LinkState::kConnected;
+    snapshot_.fault = paused ? "Fresh trainer power was lost while resuming"
+                             : paused.error->message;
+    snapshot_.clocks = clocks_.snapshot(now_ms);
+    return Status::failure(ErrorCode::kTransport,
+                           "fresh trainer power was lost while resuming the workout");
   }
   status = clocks_.resume(now_ms);
   if (!status) {
@@ -375,6 +556,52 @@ Status SessionCoordinator::end_and_save(std::uint64_t now_ms, bool interrupted) 
   return finish(now_ms, interrupted);
 }
 
+Status SessionCoordinator::discard(std::uint64_t now_ms) {
+  if (state_ == RideState::kRunning) {
+    const Status paused = pause(PauseReason::kUser, now_ms);
+    if (!paused) return paused;
+  }
+  if (state_ != RideState::kPaused) {
+    return Status::failure(ErrorCode::kConflict, "there is no active ride to discard");
+  }
+  if (trainer_ == nullptr) {
+    return Status::failure(ErrorCode::kTransport, "trainer controller is missing");
+  }
+  const Status stopped = trainer_->stop();
+  // A disconnected trainer is already outside the controller's reach. The
+  // paused safety state has stopped active recording, so the local ride can
+  // still be discarded without manufacturing a saved interruption.
+  if (!stopped && snapshot_.pause_reason != PauseReason::kTrainerDisconnected) {
+    return stopped;
+  }
+  if (journal_ == nullptr) {
+    return Status::failure(ErrorCode::kStorage, "durable session journal is unavailable");
+  }
+  const Status discarded = journal_->discard_current();
+  if (!discarded) return discarded;
+
+  clocks_ = SessionClocks{};
+  session_uuid_.clear();
+  destination_athlete_id_.clear();
+  events_.clear();
+  buffered_samples_.clear();
+  next_sample_sequence_ = 0U;
+  next_sample_due_ms_ = 0U;
+  ramp_start_active_ms_ = 0U;
+  last_commanded_target_w_ = -1;
+  stop_event_appended_ = false;
+  finishing_interrupted_ = false;
+  state_ = RideState::kPreview;
+  snapshot_.state = RideState::kPreview;
+  snapshot_.clocks = ClockSnapshot{};
+  snapshot_.virtual_point = VirtualPoint{};
+  snapshot_.complete = false;
+  snapshot_.pause_reason = PauseReason::kUser;
+  snapshot_.resistance_unknown = false;
+  snapshot_.fault.clear();
+  return Status::ok();
+}
+
 Status SessionCoordinator::finish(std::uint64_t now_ms, bool interrupted) {
   if (state_ == RideState::kComplete) return Status::ok();
   if (state_ != RideState::kFinishing) {
@@ -382,7 +609,9 @@ Status SessionCoordinator::finish(std::uint64_t now_ms, bool interrupted) {
     finishing_interrupted_ = interrupted;
     snapshot_.state = state_;
     if (trainer_ != nullptr) {
+      last_wait_now_ms_ = now_ms;
       const Status stopped = trainer_->stop();
+      now_ms = std::max(now_ms, last_wait_now_ms_);
       if (!stopped) snapshot_.resistance_unknown = true;
     }
   }
@@ -394,10 +623,8 @@ Status SessionCoordinator::finish(std::uint64_t now_ms, bool interrupted) {
   }
   const Status flushed = flush_samples();
   if (!flushed) return flushed;
-  if (clocks_.running()) {
-    const Status clock_finished = clocks_.finish(now_ms);
-    if (!clock_finished) return clock_finished;
-  }
+  const Status clock_finished = clocks_.finish(now_ms);
+  if (!clock_finished) return clock_finished;
   const ClockSnapshot clocks = clocks_.snapshot(now_ms);
   const bool naturally_complete = clocks.plan_ms >= workout_.duration_ms();
   finishing_interrupted_ = finishing_interrupted_ || !naturally_complete;
@@ -422,6 +649,7 @@ Status SessionCoordinator::finish(std::uint64_t now_ms, bool interrupted) {
   snapshot_.clocks = clocks;
   state_ = RideState::kComplete;
   snapshot_.state = state_;
+  finish_pending_ = false;
   return Status::ok();
 }
 

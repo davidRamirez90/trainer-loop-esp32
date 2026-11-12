@@ -7,7 +7,9 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
+#include <utility>
 
 namespace trainer_loop {
 
@@ -83,6 +85,12 @@ class NimbleCentral : public ITrainerController {
   bool trainer_control_pending() const;
   TrainerCapabilities trainer_capabilities() const;
   const BleConnectionManager& connection_manager() const { return connections_; }
+  void set_wait_observer(std::function<void(std::uint64_t)> observer) {
+    wait_observer_ = std::move(observer);
+  }
+#ifndef ESP_PLATFORM
+  Status host_inject_notification(const BleNotification& notification);
+#endif
 
  private:
   Status send_and_wait(FtmsOpcode opcode, const std::uint8_t* payload,
@@ -92,6 +100,7 @@ class NimbleCentral : public ITrainerController {
   BleConnectionManager connections_;
   bool initialized_ = false;
   bool scan_active_ = false;
+  std::function<void(std::uint64_t)> wait_observer_;
 #ifdef ESP_PLATFORM
   std::uint64_t scan_deadline_ms_ = 0U;
 #endif

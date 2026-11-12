@@ -1,0 +1,10 @@
+{
+  "name": "failed provisioning leaves setup active for a clean retry",
+  "steps": [
+    {"command":{"op":"http","method":"GET","path":"/api/v1/athlete/rejected-athlete","status":401,"body":"unauthorized"}},
+    {"command":{"op":"setup","athlete_id":"rejected-athlete"},"error":"rejected","expect":{"screen":"Setup","ride_state":"Boot"}},
+    {"command":{"op":"http","method":"GET","path":"/api/v1/athlete/sim-athlete","status":200,"body":"{\"ftp\":250,\"icu_weight\":75}"}},
+    {"command":{"op":"setup"},"expect":{"ride_state":"Ready"}},
+    {"command":{"op":"advance","ms":1000},"expect":{"ride_state":"Workout Preview","workout":"Local Endurance"}}
+  ]
+}

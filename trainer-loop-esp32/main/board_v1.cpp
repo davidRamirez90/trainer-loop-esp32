@@ -1,4 +1,8 @@
 #include "board_v1.h"
+#ifndef ESP_PLATFORM
+#include "../host/simulator/platform_services.h"
+#include <ctime>
+#endif
 
 #ifdef ESP_PLATFORM
 #include "driver/gpio.h"
@@ -328,8 +332,13 @@ Status BoardV1::initialize() {
   status_.physical_v1_audited = false;
   return Status::ok();
 #else
-  status_.reason = "V1 board support requires ESP-IDF";
-  return Status::failure(ErrorCode::kUnsupported, status_.reason);
+  status_.display_ready = true;
+  status_.touch_ready = true;
+  status_.rtc_ready = HostPlatformServices::instance().has_utc();
+  status_.sd_present = true;
+  status_.pmu_ready = true;
+  status_.reason = "host simulator board services initialized";
+  return Status::ok();
 #endif
 }
 
@@ -337,7 +346,7 @@ bool BoardV1::boot_pressed() const {
 #ifdef ESP_PLATFORM
   return gpio_get_level(static_cast<gpio_num_t>(PinMap::kBoot)) == 0;
 #else
-  return false;
+  return HostPlatformServices::instance().boot_pressed();
 #endif
 }
 
@@ -370,7 +379,7 @@ Status BoardV1::read_touch(TouchPoint* point) const {
   }
   return Status::ok();
 #else
-  return Status::failure(ErrorCode::kUnsupported, "FT3168 requires ESP-IDF");
+  return Status::ok();
 #endif
 }
 
@@ -414,7 +423,21 @@ Status BoardV1::read_rtc(RtcReading* reading) const {
   if (!reading->valid) return Status::failure(ErrorCode::kTimeUntrusted, "PCF85063 oscillator-stop flag is set");
   return Status::ok();
 #else
-  return Status::failure(ErrorCode::kUnsupported, "PCF85063 requires ESP-IDF");
+  const auto& services = HostPlatformServices::instance();
+  if (!services.has_utc()) return Status::failure(ErrorCode::kTimeUntrusted, "simulated RTC has no configured UTC");
+  const std::int64_t utc_ms = services.utc_ms();
+  const std::time_t seconds = static_cast<std::time_t>(utc_ms / 1000LL);
+  std::tm calendar{};
+  if (::gmtime_r(&seconds, &calendar) == nullptr) return Status::failure(ErrorCode::kTimeUntrusted, "simulated RTC UTC is invalid");
+  reading->valid = true;
+  reading->utc_ms = utc_ms;
+  reading->year = static_cast<std::uint16_t>(calendar.tm_year + 1900);
+  reading->month = static_cast<std::uint8_t>(calendar.tm_mon + 1);
+  reading->day = static_cast<std::uint8_t>(calendar.tm_mday);
+  reading->hour = static_cast<std::uint8_t>(calendar.tm_hour);
+  reading->minute = static_cast<std::uint8_t>(calendar.tm_min);
+  reading->second = static_cast<std::uint8_t>(calendar.tm_sec);
+  return Status::ok();
 #endif
 }
 

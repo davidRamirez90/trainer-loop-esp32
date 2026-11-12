@@ -1,0 +1,14 @@
+{
+  "name": "settings are changed through production LVGL and retained storage",
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"SETTINGS"},"expect":{"screen":"Settings"}},
+    {"command":{"op":"click","text":"+"}},
+    {"command":{"op":"click","text":"SAVE"},"expect":{"screen":"Home","profile.ftp_watts":255,"profile.ftp_local_override":true}},
+    {"command":{"op":"restart"}},
+    {"command":{"op":"advance","ms":100},"expect":{"ride_state":"Workout Preview","workout":"Local Endurance","profile.ftp_watts":255,"profile.ftp_local_override":true}},
+    {"command":{"op":"click","control_id":"workout-card"},"expect":{"screen":"Workout Preview"}},
+    {"command":{"op":"state"},"expect":{"profile.ftp_watts":255,"profile.ftp_local_override":true}}
+  ]
+}

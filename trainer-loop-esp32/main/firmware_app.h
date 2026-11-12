@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <vector>
 
 #ifdef ESP_PLATFORM
@@ -32,13 +33,35 @@ namespace trainer_loop {
 
 class FirmwareApp {
  public:
+  explicit FirmwareApp(std::string storage_root = "/storage");
   void start();
+  // Runs one serialized production runtime iteration at the supplied
+  // monotonic time. Host callers advance this in 100 ms increments.
+  Status runtime_step(std::uint64_t now_ms);
+  void boot_input(bool pressed);
+#if defined(TRAINER_LOOP_HOST_SIM)
+  Status set_simulated_utc(std::int64_t utc_ms, bool trusted);
+#endif
+  Status setup(const SetupCandidate& candidate);
+  UiSnapshot snapshot() const;
+  bool runtime_started() const { return runtime_started_; }
+  const CoordinatorSnapshot& coordinator_snapshot() const { return coordinator_.snapshot(); }
+  const SessionCoordinator& coordinator() const { return coordinator_; }
+#if defined(TRAINER_LOOP_HOST_SIM)
+  const std::vector<std::string>& event_trace() const { return event_trace_; }
+#endif
+  LvglPresenter& display() { return display_; }
+  const LvglPresenter& display() const { return display_; }
+  NimbleCentral& ble() { return ble_; }
+  const NimbleCentral& ble() const { return ble_; }
 
  private:
   Status commit_setup(const SetupCandidate& candidate);
   void on_provisioning_stopped();
   void start_runtime_task();
   void runtime_loop();
+  Status runtime_iteration(std::uint64_t now_ms);
+  void on_controller_wait(std::uint64_t now_ms);
   void consume_ble_notifications();
   void process_ui_command(const UiCommand& command, std::uint64_t now_ms);
   UiSnapshot make_runtime_ui_snapshot(std::uint64_t now_ms) const;
@@ -55,7 +78,9 @@ class FirmwareApp {
   void reconcile_finalized_sessions();
   void process_pending_upload(std::uint64_t now_ms);
   void reconcile_pending_fits();
+  void trace_event(std::string event);
 
+  std::string storage_root_;
   board_v1::BoardV1 board_;
   TimeService time_;
   StorageMount storage_;
@@ -65,15 +90,15 @@ class FirmwareApp {
   SetupTransaction setup_transaction_{&settings_};
   ProvisioningServer provisioning_{&setup_session_};
   IntervalsHttpClient intervals_http_;
-  WorkoutCache workout_cache_{"/storage/cache"};
+  WorkoutCache workout_cache_;
   IntervalsSync intervals_sync_{&intervals_http_, &workout_cache_, &settings_};
   TimeSynchronizer time_sync_;
   LvglPresenter display_;
   NimbleCentral ble_;
-  SessionJournal journal_{"/storage/journal"};
-  HistoryStore history_{"/storage/history.db"};
-  FitArtifactStore fit_store_{"/storage/fit"};
-  UploadQueue upload_queue_{"/storage/upload-queue.db"};
+  SessionJournal journal_;
+  HistoryStore history_;
+  FitArtifactStore fit_store_;
+  UploadQueue upload_queue_;
   SessionCoordinator coordinator_{&ble_, &journal_};
   SensorSnapshot sensors_;
   std::vector<CachedWorkout> cached_workouts_;
@@ -85,6 +110,8 @@ class FirmwareApp {
   bool history_active_ = false;
   bool history_detail_active_ = false;
   bool stop_confirmation_active_ = false;
+  bool discard_confirmation_active_ = false;
+  bool workout_preview_active_ = false;
   std::string history_detail_uuid_;
   bool settings_active_ = false;
   bool ui_busy_ = false;
@@ -102,6 +129,13 @@ class FirmwareApp {
   RetryPolicy sync_retry_;
   WifiStation wifi_;
   ButtonGesture boot_button_;
+  std::uint64_t runtime_now_ms_ = 0U;
+  bool runtime_started_ = false;
+  bool setup_active_ = false;
+#if defined(TRAINER_LOOP_HOST_SIM)
+  std::vector<std::string> event_trace_;
+#endif
+  std::string startup_error_;
 #ifdef ESP_PLATFORM
   static void runtime_task_entry(void* argument);
   TaskHandle_t runtime_task_ = nullptr;

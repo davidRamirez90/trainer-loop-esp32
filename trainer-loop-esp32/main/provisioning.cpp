@@ -452,21 +452,6 @@ ProvisioningServer::~ProvisioningServer() { (void)stop(); }
 }  // namespace trainer_loop
 
 #else
-
-namespace trainer_loop {
-
-Status ProvisioningServer::start(std::uint64_t) {
-  return Status::failure(ErrorCode::kUnsupported, "ESP-IDF provisioning is unavailable in the host build");
-}
-
-Status ProvisioningServer::stop() {
-  running_ = false;
-  if (session_ != nullptr) session_->close();
-  return Status::ok();
-}
-
-ProvisioningServer::~ProvisioningServer() { (void)stop(); }
-
-}  // namespace trainer_loop
+#include "../host/simulator/services_provisioning.inc"
 
 #endif

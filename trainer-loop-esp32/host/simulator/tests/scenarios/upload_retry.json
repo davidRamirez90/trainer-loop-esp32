@@ -1,0 +1,25 @@
+{
+  "name": "upload failures stay local and retry through the production history UI",
+  "fit_globs": ["fit/*.fit"],
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"click","control_id":"workout-card"}},
+    {"command":{"op":"click","text":"START WORKOUT"},"expect":{"ride_state":"Running"}},
+    {"command":{"op":"advance","ms":1500},"expect":{"elapsed_active_ms":{"op":"gt","value":1000}}},
+    {"command":{"op":"http","method":"POST","path":"/api/v1/athlete/sim-athlete/activities","status":503,"body":"temporary outage"}},
+    {"command":{"op":"click","text":"PAUSE"},"expect":{"ride_state":"Paused"}},
+    {"command":{"op":"click","text":"END & SAVE"}},
+    {"command":{"op":"click","text":"END & SAVE"},"expect":{"screen":"Completion","ride_state":"Complete"}},
+    {"command":{"op":"advance","ms":100},"expect":{"history.0.upload_status":"RETRY_WAIT"}},
+    {"command":{"op":"http","method":"POST","path":"/api/v1/athlete/sim-athlete/activities","status":201,"body":"{\"id\":\"retried-activity\"}"}},
+    {"command":{"op":"click","text":"HOME"}},
+    {"command":{"op":"click","text":"HISTORY"},"expect":{"screen":"History"}},
+    {"command":{"op":"click","text":"RETRY UPLOAD"}},
+    {"command":{"op":"advance","ms":100},"expect":{"history.0.upload_status":"UPLOADED"}},
+    {"command":{"op":"click","text":"BACK"},"expect":{"screen":"Home","history.0.upload_status":"UPLOADED"}}
+  ]
+}

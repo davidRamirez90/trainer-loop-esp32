@@ -49,6 +49,7 @@ class SessionJournal {
   Status update_manifest(JournalManifest manifest);
   Status flush();
   Status finalize(const JournalManifest& manifest);
+  Status discard_current();
 
   bool has_current_session() const;
   Result<RecoveredSession> recover_current() const;

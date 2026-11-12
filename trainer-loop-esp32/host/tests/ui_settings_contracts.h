@@ -20,6 +20,20 @@ void ui_settings_contracts() {
   assert(stop_confirmation.screen == UiScreen::kStopConfirmation);
   assert(stop_confirmation.end_save_available);
   assert(!stop_confirmation.resume_available && !stop_confirmation.settings_available);
+  const UiSnapshot discard_confirmation = make_discard_confirmation_snapshot(
+      make_ui_snapshot(paused_snapshot));
+  assert(discard_confirmation.screen == UiScreen::kDiscardConfirmation);
+  assert(discard_confirmation.discard_available);
+  assert(!discard_confirmation.end_save_available && !discard_confirmation.resume_available);
+  UiSnapshot timed_stop_confirmation;
+  timed_stop_confirmation.elapsed_active_ms = 30000U;
+  timed_stop_confirmation.elapsed_wall_ms = 57000U;
+  assert(stop_confirmation_duration_ms(timed_stop_confirmation) == 30000U);
+  CoordinatorSnapshot preview_snapshot;
+  preview_snapshot.state = RideState::kPreview;
+  const UiSnapshot preview = make_ui_snapshot(preview_snapshot);
+  assert(preview.screen == UiScreen::kPreview);
+  assert(preview.devices_available && preview.settings_available);
   CoordinatorSnapshot ready_snapshot;
   ready_snapshot.state = RideState::kReady;
   const UiSnapshot home_snapshot = make_ui_snapshot(ready_snapshot);

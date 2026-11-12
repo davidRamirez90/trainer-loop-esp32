@@ -1,0 +1,10 @@
+{
+  "name": "Intervals authorization rejection leaves local training available",
+  "steps": [
+    {"command":{"op":"setup"},"expect":{"ride_state":"Ready"}},
+    {"command":{"op":"advance","ms":1000},"expect":{"ride_state":"Workout Preview","workout":"Local Endurance"}},
+    {"command":{"op":"http","method":"GET","path":"/api/v1/athlete/sim-athlete/events","status":401,"body":"unauthorized"}},
+    {"command":{"op":"http","method":"GET","path":"/api/v1/athlete/sim-athlete/events","status":401,"body":"unauthorized"}},
+    {"command":{"op":"advance","ms":20000},"expect":{"ride_state":"Workout Preview","workout":"Local Endurance","platform_trace":{"op":"any_contains","value":"http.response status=401"}}}
+  ]
+}

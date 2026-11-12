@@ -80,20 +80,6 @@ StorageMount::~StorageMount() { (void)unmount(); }
 }  // namespace trainer_loop
 
 #else
-
-namespace trainer_loop {
-
-StorageMount::~StorageMount() = default;
-
-Status StorageMount::mount() {
-  return Status::failure(ErrorCode::kUnsupported, "ESP-IDF storage mount is unavailable in the host build");
-}
-
-Status StorageMount::unmount() {
-  status_ = StorageStatus{};
-  return Status::ok();
-}
-
-}  // namespace trainer_loop
+#include "../host/simulator/services_storage.inc"
 
 #endif

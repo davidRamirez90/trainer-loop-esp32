@@ -30,6 +30,9 @@ class ProvisioningServer {
   Status stop();
 #ifdef ESP_PLATFORM
   void request_stop();
+#else
+  // Deterministic simulator input for the same validated setup commit path.
+  Status host_submit_candidate(const SetupCandidate& candidate);
 #endif
   bool running() const { return running_; }
   const SetupCredentials& credentials() const { return credentials_; }

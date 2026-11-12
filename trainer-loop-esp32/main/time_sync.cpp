@@ -38,13 +38,6 @@ Status TimeSynchronizer::synchronize(TimeService* time, std::uint32_t timeout_ms
 }  // namespace trainer_loop
 
 #else
-
-namespace trainer_loop {
-
-Status TimeSynchronizer::synchronize(TimeService*, std::uint32_t) {
-  return Status::failure(ErrorCode::kUnsupported, "SNTP requires ESP-IDF");
-}
-
-}  // namespace trainer_loop
+#include "../host/simulator/services_time.inc"
 
 #endif

@@ -1,0 +1,17 @@
+{
+  "name": "retained journal recovers an interrupted session into local history and FIT",
+  "fit_globs": ["fit/*.fit"],
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"click","control_id":"workout-card"}},
+    {"command":{"op":"click","text":"START WORKOUT"},"expect":{"ride_state":"Running"}},
+    {"command":{"op":"advance","ms":7000},"expect":{"elapsed_active_ms":{"op":"gt","value":6000}}},
+    {"command":{"op":"restart"}},
+    {"command":{"op":"advance","ms":100},"expect":{"ride_state":"Workout Preview","history.0.upload_status":"PENDING"}},
+    {"command":{"op":"click","text":"HISTORY"},"expect":{"screen":"History","history.0.upload_status":"PENDING"}}
+  ]
+}

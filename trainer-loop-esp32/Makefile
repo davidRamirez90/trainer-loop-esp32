@@ -4,7 +4,13 @@ CORE_INCLUDE := -Icomponents/trainer_core/include
 CORE_SOURCES := $(wildcard components/trainer_core/src/*.cpp)
 HOST_TEST := /tmp/trainer-loop-core-tests
 
-.PHONY: test host-test clean
+.PHONY: test host-test simulator simulator-test clean
+
+simulator:
+	host/simulator/run.sh --window --provisioned
+
+simulator-test:
+	host/simulator/test.sh
 
 host-test:
 	$(CXX) $(CXXFLAGS) $(CORE_INCLUDE) host/tests/test_core.cpp $(CORE_SOURCES) -o $(HOST_TEST)

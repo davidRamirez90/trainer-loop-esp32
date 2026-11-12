@@ -213,6 +213,7 @@ UiSnapshot make_ui_snapshot(const CoordinatorSnapshot& coordinator, const Workou
                                   coordinator.sensors.telemetry_subscription &&
                                   coordinator.sensors.power_w.fresh(coordinator.now_ms, kPowerStaleAfterMs);
       snapshot.end_save_available = true;
+      snapshot.discard_available = true;
       break;
     case RideState::kPreview:
       snapshot.screen = UiScreen::kPreview;
@@ -249,6 +250,7 @@ UiSnapshot make_stop_confirmation_snapshot(UiSnapshot snapshot) {
   snapshot.pause_available = false;
   snapshot.resume_available = false;
   snapshot.end_save_available = true;
+  snapshot.discard_available = false;
   snapshot.start_available = false;
   snapshot.settings_available = false;
   snapshot.retry_available = false;
@@ -256,6 +258,31 @@ UiSnapshot make_stop_confirmation_snapshot(UiSnapshot snapshot) {
   snapshot.history_available = false;
   snapshot.next_workout_available = false;
   return snapshot;
+}
+
+UiSnapshot make_discard_confirmation_snapshot(UiSnapshot snapshot) {
+  if (snapshot.screen != UiScreen::kActive && snapshot.screen != UiScreen::kPaused) {
+    return snapshot;
+  }
+  snapshot.screen = UiScreen::kDiscardConfirmation;
+  snapshot.pause_available = false;
+  snapshot.resume_available = false;
+  snapshot.end_save_available = false;
+  snapshot.discard_available = true;
+  snapshot.start_available = false;
+  snapshot.settings_available = false;
+  snapshot.retry_available = false;
+  snapshot.devices_available = false;
+  snapshot.history_available = false;
+  snapshot.next_workout_available = false;
+  return snapshot;
+}
+
+std::uint32_t stop_confirmation_duration_ms(const UiSnapshot& snapshot) {
+  // The confirmation is shown after the ride has paused. Active time is the
+  // stable workout duration; wall time intentionally includes time spent
+  // waiting on this decision for recording/history purposes.
+  return snapshot.elapsed_active_ms;
 }
 
 const char* ui_screen_name(UiScreen screen) {
@@ -267,6 +294,7 @@ const char* ui_screen_name(UiScreen screen) {
     case UiScreen::kActive: return "Active";
     case UiScreen::kPaused: return "Paused";
     case UiScreen::kStopConfirmation: return "Stop Confirmation";
+    case UiScreen::kDiscardConfirmation: return "Discard Confirmation";
     case UiScreen::kCompletion: return "Completion";
     case UiScreen::kUploadStatus: return "Upload Status";
     case UiScreen::kHistory: return "History";

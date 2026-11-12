@@ -1,0 +1,16 @@
+{
+  "name": "slow FTMS acknowledgements keep shared runtime ticks and recording alive",
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"click","control_id":"workout-card"}},
+    {"command":{"op":"click","text":"START WORKOUT"},"expect":{"ride_state":"Running"}},
+    {"command":{"op":"ftms","delay_ms":250}},
+    {"command":{"op":"advance","ms":1100},"expect":{"ride_state":"Running","elapsed_active_ms":{"op":"gte","value":1100},"recorded_sample_count":{"op":"gte","value":2},"trace":{"op":"any_contains","value":"runtime.wait_tick"}}},
+    {"command":{"op":"ftms","timeout":true}},
+    {"command":{"op":"advance","ms":1000},"expect":{"ride_state":"Paused","pause_reason":"command_failure","elapsed_active_ms":{"op":"gte","value":4000},"recorded_sample_count":{"op":"gte","value":4},"samples":{"op":"max_gap_lte","value":1100},"trace":{"op":"any_contains","value":"runtime.wait_tick"}}}
+  ]
+}

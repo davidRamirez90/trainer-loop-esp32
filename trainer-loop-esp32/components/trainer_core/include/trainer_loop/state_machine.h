@@ -70,9 +70,14 @@ class SessionCoordinator {
   Status start(std::uint64_t now_ms, StartTimeAnchor anchor, const SensorSnapshot& sensors,
                bool storage_reserved, std::string destination_athlete_id = {});
   Status tick(std::uint64_t now_ms, const SensorSnapshot& sensors);
+  // Advances clocks, safety checks, telemetry, and recording while the
+  // controller is synchronously waiting for an acknowledgement. This path
+  // never issues another controller command.
+  Status tick_control_suppressed(std::uint64_t now_ms, const SensorSnapshot& sensors);
   Status pause(PauseReason reason, std::uint64_t now_ms);
   Status resume(std::uint64_t now_ms, const SensorSnapshot& sensors);
   Status end_and_save(std::uint64_t now_ms, bool interrupted = false);
+  Status discard(std::uint64_t now_ms);
 
   const CoordinatorSnapshot& snapshot() const { return snapshot_; }
   const Workout* selected_workout() const {
@@ -80,12 +85,18 @@ class SessionCoordinator {
   }
   const std::string& session_uuid() const { return session_uuid_; }
   const StartTimeAnchor& session_anchor() const { return anchor_; }
+  std::uint32_t recorded_sample_count() const { return next_sample_sequence_; }
   const std::vector<TelemetrySample>& buffered_samples() const { return buffered_samples_; }
   const std::vector<SessionEvent>& events() const { return events_; }
 
  private:
   Status append_event(SessionEvent::Type type, std::uint64_t now_ms, const std::string& reason);
   Status flush_samples();
+  Status record_sample(std::uint64_t now_ms, const SensorSnapshot& sensors,
+                       int commanded_target_w);
+  Status pause_without_controller(PauseReason reason, std::uint64_t now_ms);
+  Status finish_deferred_safety_pause(std::uint64_t now_ms);
+  bool trainer_inputs_fresh(const SensorSnapshot& sensors, std::uint64_t now_ms) const;
   Status finish(std::uint64_t now_ms, bool interrupted);
   Result<int> quantized_target(int watts) const;
   Result<int> restart_target(int interval_target) const;
@@ -109,6 +120,9 @@ class SessionCoordinator {
   int last_commanded_target_w_ = -1;
   bool stop_event_appended_ = false;
   bool finishing_interrupted_ = false;
+  bool finish_pending_ = false;
+  bool safety_pause_pending_ = false;
+  std::uint64_t last_wait_now_ms_ = 0U;
   CoordinatorSnapshot snapshot_;
   std::vector<TelemetrySample> buffered_samples_;
   std::vector<SessionEvent> events_;

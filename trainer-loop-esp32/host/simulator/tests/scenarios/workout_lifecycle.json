@@ -1,0 +1,26 @@
+{
+  "name": "production UI workout lifecycle, save, history, and FIT",
+  "fit_globs": ["fit/*.fit"],
+  "steps": [
+    {"command":{"op":"setup"},"expect":{"ride_state":"Ready"}},
+    {"command":{"op":"advance","ms":1000},"expect":{"ride_state":"Workout Preview","workout":"Local Endurance"}},
+    {"command":{"op":"click","text":"DEVICES"},"expect":{"screen":"Pairing"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"},"expect":{"screen":"Home"}},
+    {"command":{"op":"advance","ms":100},"expect":{"trainer_status":"Trainer connected","start_available":true}},
+    {"command":{"op":"click","control_id":"workout-card"},"expect":{"screen":"Workout Preview"}},
+    {"command":{"op":"click","text":"START WORKOUT"},"expect":{"ride_state":"Running","screen":"Active"}},
+    {"command":{"op":"advance","ms":1000},"expect":{"elapsed_active_ms":{"op":"gt","value":500}}},
+    {"command":{"op":"click","text":"PAUSE"},"expect":{"ride_state":"Paused","screen":"Paused"}},
+    {"command":{"op":"click","text":"RESUME"},"expect":{"ride_state":"Running"}},
+    {"command":{"op":"advance","ms":1000},"expect":{"elapsed_active_ms":{"op":"gt","value":1000}}},
+    {"command":{"op":"click","text":"PAUSE"},"expect":{"ride_state":"Paused","screen":"Paused"}},
+    {"command":{"op":"click","text":"END & SAVE"},"expect":{"screen":"Stop Confirmation"}},
+    {"command":{"op":"click","text":"END & SAVE"},"expect":{"screen":"Completion","ride_state":"Complete","history.0.upload_status":"UPLOADED"}},
+    {"command":{"op":"advance","ms":20000},"expect":{"elapsed_wall_ms":{"op":"lt","value":10000}}},
+    {"command":{"op":"click","text":"HOME"},"expect":{"ride_state":"Ready"}},
+    {"command":{"op":"click","text":"HISTORY"},"expect":{"screen":"History","history.0.upload_status":"UPLOADED"}},
+    {"command":{"op":"click","control_id":"history-0"},"expect":{"screen":"History Detail"}},
+    {"command":{"op":"click","text":"BACK"},"expect":{"screen":"History"}},
+    {"command":{"op":"click","text":"BACK"},"expect":{"screen":"Home"}}
+  ]
+}

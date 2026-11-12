@@ -1,0 +1,24 @@
+{
+  "name": "cached workout starts and saves locally while offline after restart",
+  "fit_globs": ["fit/*.fit"],
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000},"expect":{"workout":"Local Endurance"}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100},"expect":{"trainer_status":"Trainer connected"}},
+    {"command":{"op":"network","wifi":false,"http":false}},
+    {"command":{"op":"restart"}},
+    {"command":{"op":"advance","ms":100},"expect":{"wifi_status":"Wi-Fi offline","ride_state":"Workout Preview","workout":"Local Endurance"}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100},"expect":{"trainer_status":"Trainer connected","wifi_status":"Wi-Fi offline"}},
+    {"command":{"op":"click","control_id":"workout-card"},"expect":{"screen":"Workout Preview","workout":"Local Endurance"}},
+    {"command":{"op":"click","text":"START WORKOUT"},"expect":{"ride_state":"Running"}},
+    {"command":{"op":"advance","ms":1500},"expect":{"elapsed_active_ms":{"op":"gt","value":1000}}},
+    {"command":{"op":"click","text":"PAUSE"},"expect":{"ride_state":"Paused"}},
+    {"command":{"op":"click","text":"END & SAVE"}},
+    {"command":{"op":"click","text":"END & SAVE"},"expect":{"screen":"Completion","ride_state":"Complete"}},
+    {"command":{"op":"advance","ms":100},"expect":{"history.0.upload_status":{"op":"ne","value":"UPLOADED"}}}
+  ]
+}

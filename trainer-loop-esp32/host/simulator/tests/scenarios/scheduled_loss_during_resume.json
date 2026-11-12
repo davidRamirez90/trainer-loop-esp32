@@ -1,0 +1,19 @@
+{
+  "name": "disconnect and reconnect deadlines during a delayed resume remain a safety pause",
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"click","control_id":"workout-card"}},
+    {"command":{"op":"click","text":"START WORKOUT"},"expect":{"ride_state":"Running"}},
+    {"command":{"op":"click","text":"PAUSE"},"expect":{"ride_state":"Paused"}},
+    {"command":{"op":"ftms","delay_ms":250}},
+    {"command":{"op":"schedule","kind":"device","at_ms":1280,"role":"trainer","available":false}},
+    {"command":{"op":"schedule","kind":"device","at_ms":1340,"role":"trainer","available":true}},
+    {"command":{"op":"click","text":"RESUME"},"expect":{"ride_state":"Paused","pause_reason":"user","trainer_status":"Trainer reconnecting","devices.0.generation":{"op":"gt","value":2}}},
+    {"command":{"op":"advance","ms":5000},"expect":{"ride_state":"Paused","screen":"Paused","trainer_status":"Trainer connected","devices.0.generation":{"op":"gt","value":2}}},
+    {"command":{"op":"click","text":"RESUME"},"expect":{"ride_state":"Running","screen":"Active"}}
+  ]
+}

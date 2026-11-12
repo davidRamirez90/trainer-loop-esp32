@@ -1,0 +1,10 @@
+{
+  "name": "time sync failure rolls provisioning back cleanly for a later retry",
+  "steps": [
+    {"command":{"op":"network","wifi":true,"http":true,"time_sync":false}},
+    {"command":{"op":"setup"},"error":"simulated SNTP","expect":{"screen":"Setup","ride_state":"Boot","platform_trace":{"op":"any_contains","value":"time.sync.unavailable"}}},
+    {"command":{"op":"network","time_sync":true}},
+    {"command":{"op":"setup"},"expect":{"ride_state":"Ready"}},
+    {"command":{"op":"advance","ms":1000},"expect":{"ride_state":"Workout Preview","workout":"Local Endurance"}}
+  ]
+}

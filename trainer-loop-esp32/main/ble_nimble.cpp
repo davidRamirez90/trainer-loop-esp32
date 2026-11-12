@@ -1161,7 +1161,9 @@ Status NimbleCentral::send_and_wait(FtmsOpcode opcode, const std::uint8_t* paylo
     const Status polled = poll(monotonic_ms());
     if (!polled) return polled;
     vTaskDelay(pdMS_TO_TICKS(10U));
+    if (wait_observer_) wait_observer_(monotonic_ms());
   }
+  if (wait_observer_) wait_observer_(monotonic_ms());
   return Status::failure(ErrorCode::kTimeout, "FTMS indication was not received");
 }
 
@@ -1236,94 +1238,6 @@ TrainerCapabilities NimbleCentral::trainer_capabilities() const {
 
 #else
 
-namespace trainer_loop {
-
-struct NimbleRuntime {};
-
-NimbleCentral::NimbleCentral() = default;
-
-NimbleCentral::~NimbleCentral() = default;
-
-Status NimbleCentral::initialize() {
-  return Status::failure(ErrorCode::kUnsupported, "NimBLE requires ESP-IDF");
-}
-
-Status NimbleCentral::start_foreground_scan(std::uint64_t) {
-  return Status::failure(ErrorCode::kUnsupported, "NimBLE requires ESP-IDF");
-}
-
-Status NimbleCentral::poll(std::uint64_t) {
-  return Status::failure(ErrorCode::kUnsupported, "NimBLE requires ESP-IDF");
-}
-
-Status NimbleCentral::poll_scan(std::uint64_t now_ms) { return poll(now_ms); }
-
-Status NimbleCentral::stop_scan() {
-  scan_active_ = false;
-  return connections_.scan_finished();
-}
-
-std::size_t NimbleCentral::scan_result_count() const { return 0U; }
-
-bool NimbleCentral::scan_result(std::size_t, DeviceIdentity*) const { return false; }
-
-Status NimbleCentral::select_device(const DeviceIdentity&) {
-  return Status::failure(ErrorCode::kUnsupported, "NimBLE requires ESP-IDF");
-}
-
-Status NimbleCentral::forget_device(PeripheralRole) {
-  return Status::failure(ErrorCode::kUnsupported, "NimBLE requires ESP-IDF");
-}
-
-Status NimbleCentral::connect_selected(PeripheralRole) {
-  return Status::failure(ErrorCode::kUnsupported, "NimBLE requires ESP-IDF");
-}
-
-Status NimbleCentral::write_ftms_command(FtmsOpcode, const std::uint8_t*, std::size_t,
-                                         std::uint64_t) {
-  return Status::failure(ErrorCode::kUnsupported, "NimBLE requires ESP-IDF");
-}
-
-Status NimbleCentral::send_and_wait(FtmsOpcode, const std::uint8_t*, std::size_t) {
-  return Status::failure(ErrorCode::kUnsupported, "NimBLE requires ESP-IDF");
-}
-
-Status NimbleCentral::acquire_control() {
-  return Status::failure(ErrorCode::kUnsupported, "NimBLE requires ESP-IDF");
-}
-
-Status NimbleCentral::set_target_power(int) {
-  return Status::failure(ErrorCode::kUnsupported, "NimBLE requires ESP-IDF");
-}
-
-Status NimbleCentral::start_or_resume() {
-  return Status::failure(ErrorCode::kUnsupported, "NimBLE requires ESP-IDF");
-}
-
-Status NimbleCentral::pause() {
-  return Status::failure(ErrorCode::kUnsupported, "NimBLE requires ESP-IDF");
-}
-
-Status NimbleCentral::stop() {
-  return Status::failure(ErrorCode::kUnsupported, "NimBLE requires ESP-IDF");
-}
-
-bool NimbleCentral::pop_notification(BleNotification*) { return false; }
-
-std::uint32_t NimbleCentral::dropped_notification_count() const { return 0U; }
-
-bool NimbleCentral::host_ready() const { return false; }
-
-bool NimbleCentral::trainer_services_ready() const { return false; }
-
-bool NimbleCentral::heart_rate_services_ready() const { return false; }
-
-bool NimbleCentral::trainer_control_valid() const { return false; }
-
-bool NimbleCentral::trainer_control_pending() const { return false; }
-
-TrainerCapabilities NimbleCentral::trainer_capabilities() const { return TrainerCapabilities{}; }
-
-}  // namespace trainer_loop
+#include "../host/simulator/services_ble.inc"
 
 #endif

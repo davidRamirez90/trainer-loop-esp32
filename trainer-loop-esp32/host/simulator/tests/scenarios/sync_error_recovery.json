@@ -1,0 +1,11 @@
+{
+  "name": "Intervals sync keeps setup local after HTTP error and recovers on retry",
+  "steps": [
+    {"command":{"op":"setup"},"expect":{"ride_state":"Ready"}},
+    {"command":{"op":"advance","ms":1000},"expect":{"ride_state":"Workout Preview","workout":"Local Endurance"}},
+    {"command":{"op":"http","method":"GET","path":"/api/v1/athlete/sim-athlete/events","status":503,"body":"temporary outage"}},
+    {"command":{"op":"advance","ms":20000},"expect":{"platform_trace":{"op":"any_contains","value":"http.response status=503"},"ride_state":"Workout Preview","workout":"Local Endurance"}},
+    {"command":{"op":"http","method":"GET","path":"/api/v1/athlete/sim-athlete/events","status":200,"body":"[{\"id\":\"host-workout\",\"name\":\"Local Endurance\",\"start_date_local\":\"2026-09-30T07:00:00\",\"sport\":\"Ride\"}]"}},
+    {"command":{"op":"advance","ms":60000},"expect":{"platform_trace":{"op":"any_contains","value":"http.response status=200"},"ride_state":"Workout Preview","workout":"Local Endurance"}}
+  ]
+}

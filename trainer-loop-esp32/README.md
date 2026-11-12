@@ -52,3 +52,12 @@ until the exact Zwift Hub One behavior has been measured and accepted.
 
 Laptop evidence and the deferred home test sequence are in
 [`docs/validation/LAPTOP_VALIDATION.md`](docs/validation/LAPTOP_VALIDATION.md).
+
+## Native simulator
+
+The native simulator compiles the production application and LVGL interface
+with local platform fixtures. Build/run with `make simulator`; use the
+headless JSON protocol through `host/simulator/run.sh`. Architecture,
+dependencies and control commands are in
+[the simulator guide](docs/simulator/README.md). `make simulator-test` runs the
+simulator-enabled regression build.

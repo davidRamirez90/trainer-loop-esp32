@@ -21,7 +21,7 @@ class WifiStation {
                             std::uint32_t timeout_ms);
   Status wait_for_connection(std::uint32_t timeout_ms);
   Status disconnect();
-  bool connected() const { return connected_; }
+  bool connected() const;
 
  private:
 #ifdef ESP_PLATFORM

@@ -156,11 +156,6 @@ Result<HttpResponse> IntervalsHttpClient::execute(const HttpRequest& request) co
 }  // namespace trainer_loop
 
 #else
-
-namespace trainer_loop {
-Result<HttpResponse> IntervalsHttpClient::execute(const HttpRequest&) const {
-  return Result<HttpResponse>::failure(ErrorCode::kUnsupported, "Intervals HTTP requires ESP-IDF");
-}
-}  // namespace trainer_loop
+#include "../host/simulator/services_http.inc"
 
 #endif

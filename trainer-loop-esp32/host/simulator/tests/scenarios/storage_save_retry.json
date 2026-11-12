@@ -1,0 +1,21 @@
+{
+  "name": "session save can be retried after a bounded storage write failure",
+  "fit_globs": ["fit/*.fit"],
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"click","control_id":"workout-card"}},
+    {"command":{"op":"click","text":"START WORKOUT"},"expect":{"ride_state":"Running"}},
+    {"command":{"op":"advance","ms":1200},"expect":{"elapsed_active_ms":{"op":"gt","value":500}}},
+    {"command":{"op":"click","text":"PAUSE"},"expect":{"ride_state":"Paused"}},
+    {"command":{"op":"click","text":"END & SAVE"}},
+    {"command":{"op":"storage","write_budget":0}},
+    {"command":{"op":"click","text":"END & SAVE"},"expect":{"screen":"Error","ride_state":"Finishing","fault":"Save incomplete. Retry keeps the same session."}},
+    {"command":{"op":"storage","clear":true}},
+    {"command":{"op":"click","text":"RETRY SAVE"},"expect":{"screen":"Completion","ride_state":"Complete"}},
+    {"command":{"op":"advance","ms":100},"expect":{"history.0.upload_status":"UPLOADED"}}
+  ]
+}

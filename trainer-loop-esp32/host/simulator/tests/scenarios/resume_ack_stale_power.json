@@ -1,0 +1,16 @@
+{
+  "name": "resume handshake aborts if fresh power expires before Start ACK",
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"click","control_id":"workout-card"}},
+    {"command":{"op":"click","text":"START WORKOUT"},"expect":{"ride_state":"Running"}},
+    {"command":{"op":"click","text":"PAUSE"},"expect":{"ride_state":"Paused"}},
+    {"command":{"op":"ftms","delay_ms":1100}},
+    {"command":{"op":"device","role":"trainer","telemetry":false}},
+    {"command":{"op":"click","text":"RESUME"},"expect":{"ride_state":"Paused","resume_available":false}}
+  ]
+}

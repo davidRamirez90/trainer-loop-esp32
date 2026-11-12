@@ -1,32 +1,50 @@
 #include "firmware_app.h"
 
-#ifdef ESP_PLATFORM
-#include "esp_heap_caps.h"
-#include "esp_timer.h"
-#include "esp_log.h"
-#include "esp_system.h"
 #include "trainer_loop/fit_encoder.h"
 #include "trainer_loop/hash.h"
 #include "trainer_loop/limits.h"
 #include "trainer_loop/summary.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <ctime>
-#include <algorithm>
 #include <fstream>
 #include <utility>
+
+#ifndef ESP_PLATFORM
+#include "simulator/platform_services.h"
+#endif
+
+#ifdef ESP_PLATFORM
+#include "esp_heap_caps.h"
+#include "esp_timer.h"
+#include "esp_log.h"
+#include "esp_system.h"
+#endif
+
+#ifdef ESP_PLATFORM
+#define APP_LOGI(...) ESP_LOGI(__VA_ARGS__)
+#define APP_LOGW(...) ESP_LOGW(__VA_ARGS__)
+#define APP_LOGE(...) ESP_LOGE(__VA_ARGS__)
+#else
+#define APP_LOGI(...) ((void)0)
+#define APP_LOGW(...) ((void)0)
+#define APP_LOGE(...) ((void)0)
 #endif
 
 namespace trainer_loop {
 
-#ifdef ESP_PLATFORM
 namespace {
 
 constexpr std::uint64_t kPairingScanRetryDelayMs = 250U;
 constexpr std::uint64_t kAutomaticSyncStartupDelayMs = 20'000U;
 
 std::uint64_t monotonic_ms() {
+#ifdef ESP_PLATFORM
   return static_cast<std::uint64_t>(esp_timer_get_time() / 1000);
+#else
+  return HostPlatformServices::instance().monotonic_ms();
+#endif
 }
 
 void configure_timezone(const ProfileSettings& profile) {
@@ -36,22 +54,50 @@ void configure_timezone(const ProfileSettings& profile) {
 }
 
 void log_runtime_health(const char* stage) {
-  ESP_LOGI("trainer_app", "retry stage=%s stack_free=%u internal_free=%u largest=%u dma_free=%u dma_largest=%u",
+#ifdef ESP_PLATFORM
+  APP_LOGI("trainer_app", "retry stage=%s stack_free=%u internal_free=%u largest=%u dma_free=%u dma_largest=%u",
            stage == nullptr ? "unknown" : stage,
            static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)),
            static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_DMA | MALLOC_CAP_8BIT)),
            static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_DMA | MALLOC_CAP_8BIT)));
+#else
+  (void)stage;
+#endif
 }
 
 }  // namespace
+
+FirmwareApp::FirmwareApp(std::string storage_root)
+    : storage_root_(std::move(storage_root)),
+      time_([] { return monotonic_ms(); }),
+      workout_cache_(storage_root_ + "/cache"),
+      intervals_sync_(&intervals_http_, &workout_cache_, &settings_),
+      journal_(storage_root_ + "/journal"),
+      history_(storage_root_ + "/history.db"),
+      fit_store_(storage_root_ + "/fit"),
+      upload_queue_(storage_root_ + "/upload-queue.db") {
+  ble_.set_wait_observer([this](std::uint64_t now_ms) { on_controller_wait(now_ms); });
+#ifndef ESP_PLATFORM
+  HostPlatformServices::instance().configure(storage_root_);
 #endif
+}
+
+void FirmwareApp::on_controller_wait(std::uint64_t now_ms) {
+  runtime_now_ms_ = std::max(runtime_now_ms_, now_ms);
+  trace_event("runtime.wait_tick t=" + std::to_string(now_ms));
+  consume_ble_notifications();
+  const Status advanced = coordinator_.tick_control_suppressed(now_ms, sensors_);
+  if (!advanced) {
+    ui_message_ = advanced.error->message;
+    trace_event("runtime.wait_tick_error t=" + std::to_string(now_ms) + " error=" +
+                advanced.error->message);
+  }
+}
 
 Result<SyncMetadata> FirmwareApp::sync_today_and_persist() {
-#ifdef ESP_PLATFORM
   const std::uint32_t generation_before = settings_.current().generation;
-#endif
   const auto result = intervals_sync_.sync_today(time_);
   last_sync_state_ = result ? result.value->state : SyncState::kError;
   if (result && (last_sync_state_ == SyncState::kSuccess ||
@@ -59,55 +105,52 @@ Result<SyncMetadata> FirmwareApp::sync_today_and_persist() {
                  last_sync_state_ == SyncState::kAuthBlocked)) {
     ui_message_ = sync_state_label(last_sync_state_);
   }
-#ifdef ESP_PLATFORM
   if (result && settings_.current().generation != generation_before) {
     const Status persisted = nvs_.save(settings_.current());
     if (!persisted) {
-      ESP_LOGW("trainer_app", "updated remote profile could not be persisted: %s",
+      APP_LOGW("trainer_app", "updated remote profile could not be persisted: %s",
                persisted.error->message.c_str());
     }
   }
-#endif
   return result;
 }
 
 Status FirmwareApp::commit_setup(const SetupCandidate& candidate) {
-#ifdef ESP_PLATFORM
-  ESP_LOGI("trainer_setup", "setup validation started");
+  APP_LOGI("trainer_setup", "setup validation started");
   const auto prepared = setup_transaction_.prepare(candidate);
   if (!prepared) {
-    ESP_LOGW("trainer_setup", "setup values rejected: %s", prepared.error->message.c_str());
+    APP_LOGW("trainer_setup", "setup values rejected: %s", prepared.error->message.c_str());
     return Status::failure(prepared.error->code, prepared.error->message);
   }
 
   const Status wifi = wifi_.verify_credentials(candidate.secrets.wifi_ssid,
                                                candidate.secrets.wifi_password, 15000U);
   if (!wifi) {
-    ESP_LOGW("trainer_setup", "setup Wi-Fi verification failed: %s", wifi.error->message.c_str());
+    APP_LOGW("trainer_setup", "setup Wi-Fi verification failed: %s", wifi.error->message.c_str());
     return wifi;
   }
-  ESP_LOGI("trainer_setup", "setup Wi-Fi verification passed");
+  APP_LOGI("trainer_setup", "setup Wi-Fi verification passed");
   configure_timezone(candidate.profile);
   const Status time = time_sync_.synchronize(&time_, 15000U);
   if (!time) {
-    ESP_LOGW("trainer_setup", "setup time verification failed: %s", time.error->message.c_str());
+    APP_LOGW("trainer_setup", "setup time verification failed: %s", time.error->message.c_str());
     return time;
   }
-  ESP_LOGI("trainer_setup", "setup time verification passed");
+  APP_LOGI("trainer_setup", "setup time verification passed");
 
   const auto athlete = intervals_http_.execute(
       build_athlete_request(candidate.secrets.athlete_id, candidate.secrets.api_key));
   if (!athlete) {
-    ESP_LOGW("trainer_setup", "Intervals athlete request failed: %s", athlete.error->message.c_str());
+    APP_LOGW("trainer_setup", "Intervals athlete request failed: %s", athlete.error->message.c_str());
     return Status::failure(athlete.error->code, athlete.error->message);
   }
-  ESP_LOGI("trainer_setup", "Intervals athlete verification returned HTTP %d", athlete.value->status);
+  APP_LOGI("trainer_setup", "Intervals athlete verification returned HTTP %d", athlete.value->status);
   if (athlete.value->status == 401 || athlete.value->status == 403) {
-    ESP_LOGW("trainer_setup", "Intervals credentials were rejected");
+    APP_LOGW("trainer_setup", "Intervals credentials were rejected");
     return Status::failure(ErrorCode::kAuthentication, "Intervals credentials were rejected");
   }
   if (athlete.value->status != 200) {
-    ESP_LOGW("trainer_setup", "Intervals athlete verification returned HTTP %d",
+    APP_LOGW("trainer_setup", "Intervals athlete verification returned HTTP %d",
              athlete.value->status);
     return Status::failure(ErrorCode::kTransport,
                            "Intervals athlete verification returned HTTP " +
@@ -116,56 +159,49 @@ Status FirmwareApp::commit_setup(const SetupCandidate& candidate) {
 
   const Status persisted = nvs_.save(*prepared.value);
   if (!persisted) {
-    ESP_LOGW("trainer_setup", "settings could not be persisted: %s", persisted.error->message.c_str());
+    APP_LOGW("trainer_setup", "settings could not be persisted: %s", persisted.error->message.c_str());
     return persisted;
   }
   const Status committed = setup_transaction_.commit(*prepared.value, true, true, true);
   if (!committed) {
-    ESP_LOGW("trainer_setup", "settings commit rejected: %s", committed.error->message.c_str());
+    APP_LOGW("trainer_setup", "settings commit rejected: %s", committed.error->message.c_str());
     return committed;
   }
-  ESP_LOGI("trainer_setup", "setup settings committed");
+  APP_LOGI("trainer_setup", "setup settings committed");
 
   // A cache miss or a temporary cloud failure must not discard valid setup.
   // The prior cache remains authoritative until a complete sync publishes a
   // replacement workout set.
   const auto sync = sync_today_and_persist();
   if (!sync) {
-    ESP_LOGW("trainer_app", "initial workout sync deferred: %s", sync.error->message.c_str());
+    APP_LOGW("trainer_app", "initial workout sync deferred: %s", sync.error->message.c_str());
   } else {
-    ESP_LOGI("trainer_app", "initial workout sync state=%u",
+    APP_LOGI("trainer_app", "initial workout sync state=%u",
              static_cast<unsigned>(sync.value->state));
   }
-  ESP_LOGI("trainer_setup", "setup validation complete; handoff scheduled");
+  APP_LOGI("trainer_setup", "setup validation complete; handoff scheduled");
   return Status::ok();
-#else
-  (void)candidate;
-  return Status::failure(ErrorCode::kUnsupported, "setup commit requires ESP-IDF");
-#endif
 }
 
 void FirmwareApp::on_provisioning_stopped() {
-#ifdef ESP_PLATFORM
   if (!settings_.has_committed_settings()) return;
   const Status connected = wifi_.connect(settings_.current().secrets.wifi_ssid,
                                          settings_.current().secrets.wifi_password);
-  if (!connected) ESP_LOGW("trainer_app", "Wi-Fi reconnect after setup could not start");
+  if (!connected) APP_LOGW("trainer_app", "Wi-Fi reconnect after setup could not start");
   const Status ble_status = ble_.initialize();
   if (!ble_status) {
-    ESP_LOGE("trainer_app", "BLE could not start after setup: %s", ble_status.error->message.c_str());
+    APP_LOGE("trainer_app", "BLE could not start after setup: %s", ble_status.error->message.c_str());
     return;
   }
   sync_retry_.request_after(monotonic_ms(), kAutomaticSyncStartupDelayMs);
-  ESP_LOGI("trainer_app", "automatic workout sync retry armed after setup delay");
+  APP_LOGI("trainer_app", "automatic workout sync retry armed after setup delay");
   start_runtime_task();
-#endif
 }
-
-#ifdef ESP_PLATFORM
 
 namespace {
 
 constexpr std::uint32_t kRuntimePeriodMs = 100U;
+#ifdef ESP_PLATFORM
 // Intervals sync parses bounded JSON and normalized workouts on this task.
 // The previous 8192-word stack reached only 744 words free after a normal
 // three-request retry, leaving too little margin for an adjacent UI/retry
@@ -173,6 +209,7 @@ constexpr std::uint32_t kRuntimePeriodMs = 100U;
 // measured safety margin rather than allowing a stack-overflow reset.
 constexpr std::uint32_t kRuntimeStackSize = 12288U;
 constexpr UBaseType_t kRuntimePriority = 4U;
+#endif
 constexpr std::uint64_t kFitReservationBytes = 32U;
 constexpr std::uint64_t kSessionMetadataReserveBytes = 16U * 1024U;
 
@@ -189,8 +226,9 @@ bool connected_with_fresh_power(const SensorSnapshot& sensors, std::uint64_t now
          sensors.power_w.fresh(now_ms, kPowerStaleAfterMs);
 }
 
-Result<std::vector<std::uint8_t>> read_fit_for_upload(const UploadEntry& entry) {
-  const std::string expected_path = "/storage/fit/" + entry.session_uuid + ".fit";
+Result<std::vector<std::uint8_t>> read_fit_for_upload(const UploadEntry& entry,
+                                                      const std::string& storage_root) {
+  const std::string expected_path = storage_root + "/fit/" + entry.session_uuid + ".fit";
   if (entry.fit_path != expected_path) {
     return Result<std::vector<std::uint8_t>>::failure(
         ErrorCode::kInvalidArgument, "upload FIT path is outside the artifact store");
@@ -216,35 +254,47 @@ Result<std::vector<std::uint8_t>> read_fit_for_upload(const UploadEntry& entry) 
 
 }  // namespace
 
+#ifdef ESP_PLATFORM
 void FirmwareApp::runtime_task_entry(void* argument) {
   auto* app = static_cast<FirmwareApp*>(argument);
   if (app != nullptr) app->runtime_loop();
   vTaskDelete(nullptr);
 }
+#endif
 
 void FirmwareApp::start_runtime_task() {
+#ifdef ESP_PLATFORM
   if (runtime_task_ != nullptr) return;
+#else
+  if (runtime_started_) return;
+#endif
   const RideState state = coordinator_.snapshot().state;
   if (state != RideState::kReady) {
     const Status ready = coordinator_.enter_ready();
     if (!ready) {
-      ESP_LOGE("trainer_app", "session coordinator could not enter Ready: %s",
+      APP_LOGE("trainer_app", "session coordinator could not enter Ready: %s",
                ready.error->message.c_str());
       return;
     }
   }
+  runtime_started_ = true;
+#ifdef ESP_PLATFORM
   if (xTaskCreate(&FirmwareApp::runtime_task_entry, "trainer_runtime", kRuntimeStackSize,
                   this, kRuntimePriority, &runtime_task_) != pdPASS) {
     runtime_task_ = nullptr;
+    runtime_started_ = false;
     const std::size_t free_internal = heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     const std::size_t largest_internal = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-    ESP_LOGE("trainer_app", "runtime task could not start (internal free=%u largest=%u stack=%u words)",
+    APP_LOGE("trainer_app", "runtime task could not start (internal free=%u largest=%u stack=%u words)",
              static_cast<unsigned>(free_internal), static_cast<unsigned>(largest_internal),
              static_cast<unsigned>(kRuntimeStackSize));
   } else {
-    ESP_LOGI("trainer_app", "runtime task started (stack free=%u words)",
+    APP_LOGI("trainer_app", "runtime task started (stack free=%u words)",
              static_cast<unsigned>(uxTaskGetStackHighWaterMark(runtime_task_)));
   }
+#else
+  runtime_started_ = true;
+#endif
 }
 
 void FirmwareApp::consume_ble_notifications() {
@@ -253,18 +303,25 @@ void FirmwareApp::consume_ble_notifications() {
     const ReconnectState& link = ble_.connection_manager().state(notification.role);
     // A packet queued by an old connection must not refresh fields after a
     // reconnect has established a new ownership generation.
-    if (!notification_is_current(link, notification.generation)) continue;
+    if (!notification_is_current(link, notification.generation)) {
+      trace_event("ble.stale role=" + std::to_string(static_cast<unsigned>(notification.role)) +
+                  " generation=" + std::to_string(notification.generation));
+      continue;
+    }
+    trace_event("ble.notification kind=" +
+                std::to_string(static_cast<unsigned>(notification.kind)) +
+                " generation=" + std::to_string(notification.generation));
     if (notification.kind == BleNotificationKind::kIndoorBikeData) {
       const auto parsed = parse_indoor_bike_data(notification.payload.data(), notification.length);
       if (parsed) {
         const Status applied = apply_indoor_bike_data(*parsed.value, notification.timestamp_ms, &sensors_);
-        if (!applied) ESP_LOGW("trainer_app", "FTMS telemetry was rejected");
+        if (!applied) APP_LOGW("trainer_app", "FTMS telemetry was rejected");
       }
     } else if (notification.kind == BleNotificationKind::kHeartRateMeasurement) {
       const auto parsed = parse_heart_rate_measurement(notification.payload.data(), notification.length);
       if (parsed) {
         const Status applied = apply_heart_rate_measurement(*parsed.value, notification.timestamp_ms, &sensors_);
-        if (!applied) ESP_LOGW("trainer_app", "heart-rate telemetry was rejected");
+        if (!applied) APP_LOGW("trainer_app", "heart-rate telemetry was rejected");
       }
     }
   }
@@ -305,11 +362,11 @@ void FirmwareApp::load_cached_workout_if_available(bool refresh) {
   active_cached_workout_index_ = 0U;
   const Status selected = select_cached_workout(active_cached_workout_index_);
   if (!selected) {
-    ESP_LOGW("trainer_app", "cached workout could not enter preview: %s",
+    APP_LOGW("trainer_app", "cached workout could not enter preview: %s",
              selected.error->message.c_str());
   } else if (cached_workouts_.size() > 1U) {
     ui_message_ = "Multiple workouts found — use NEXT";
-    ESP_LOGI("trainer_app", "%u cached workouts available; previewing 1 of %u",
+    APP_LOGI("trainer_app", "%u cached workouts available; previewing 1 of %u",
              static_cast<unsigned>(cached_workouts_.size()),
              static_cast<unsigned>(cached_workouts_.size()));
   }
@@ -323,7 +380,13 @@ Status FirmwareApp::select_cached_workout(std::size_t index) {
   active_cached_workout_ = cached_workouts_[index];
   const Status selected = coordinator_.select_workout(
       active_cached_workout_->workout, settings_.current().profile, true);
-  if (!selected) active_cached_workout_.reset();
+  if (!selected) {
+    active_cached_workout_.reset();
+  } else {
+    // A newly selected cached workout is presented first as the compact Today
+    // card. The user explicitly opens the detail view from that card.
+    workout_preview_active_ = false;
+  }
   return selected;
 }
 
@@ -434,21 +497,30 @@ UiSnapshot FirmwareApp::make_runtime_ui_snapshot(std::uint64_t now_ms) const {
   if (stop_confirmation_active_) {
     ui = make_stop_confirmation_snapshot(std::move(ui));
   }
+  if (discard_confirmation_active_) {
+    ui = make_discard_confirmation_snapshot(std::move(ui));
+  }
   if (ui.screen == UiScreen::kPreview) {
     ui.start_available = time_.trusted() && capabilities_published_ &&
                          connected_with_fresh_power(sensors_, now_ms) &&
-                         check_storage_capacity("/storage", session_reservation_bytes()).enough;
+                         check_storage_capacity(storage_root_, session_reservation_bytes()).enough;
     if (!time_.trusted()) ui.safety_message = "Clock needs trusted time before start";
     else if (!capabilities_published_) ui.safety_message = "Trainer capabilities unavailable";
     else if (!connected_with_fresh_power(sensors_, now_ms)) ui.safety_message = "Fresh trainer power required";
     else if (!ui.start_available) ui.safety_message = "Recording storage reserve unavailable";
+    if (!workout_preview_active_) {
+      // Keep the coordinator in Preview so its selected workout and readiness
+      // checks remain intact, while the default surface stays a sparse Today
+      // home screen until the user taps the workout card.
+      ui.screen = UiScreen::kHome;
+    }
   }
   return ui;
 }
 
 void FirmwareApp::present_runtime_ui(std::uint64_t now_ms) {
   const Status presented = display_.present(make_runtime_ui_snapshot(now_ms));
-  if (!presented) ESP_LOGW("trainer_app", "UI snapshot was not presented: %s",
+  if (!presented) APP_LOGW("trainer_app", "UI snapshot was not presented: %s",
                            presented.error->message.c_str());
 }
 
@@ -496,6 +568,9 @@ Status FirmwareApp::retry_connection_and_sync(std::uint64_t now_ms) {
 }
 
 void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now_ms) {
+  trace_event("ui.command t=" + std::to_string(now_ms) + " type=" +
+              std::to_string(static_cast<unsigned>(command.type)) + " index=" +
+              std::to_string(command.index));
   Status status = Status::ok();
   const RideState ride_state = coordinator_.snapshot().state;
   if (ride_state == RideState::kFinishing && command.type == UiCommandType::kRetry) {
@@ -506,12 +581,22 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
   if (session_is_active(ride_state) &&
       command.type != UiCommandType::kPause && command.type != UiCommandType::kResume &&
       command.type != UiCommandType::kEndAndSave && command.type != UiCommandType::kOpenStopConfirmation &&
+      command.type != UiCommandType::kOpenDiscardConfirmation && command.type != UiCommandType::kDiscardWorkout &&
       command.type != UiCommandType::kBack) {
-    ui_message_ = "Ride active: pause, resume, end, or go back";
+    ui_message_ = "Ride active: pause, resume, end, discard, or go back";
     return;
   }
   switch (command.type) {
+    case UiCommandType::kOpenWorkoutPreview:
+      if (ride_state != RideState::kPreview || coordinator_.selected_workout() == nullptr) {
+        status = Status::failure(ErrorCode::kConflict, "workout preview is unavailable");
+      } else {
+        workout_preview_active_ = true;
+        ui_message_.clear();
+      }
+      break;
     case UiCommandType::kOpenSettings:
+      workout_preview_active_ = false;
       settings_active_ = true;
       history_active_ = false;
       history_detail_active_ = false;
@@ -531,6 +616,7 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
           {active_cached_workout_index_, cached_workouts_.size()});
       status = select_cached_workout(next.index);
       if (status) {
+        workout_preview_active_ = true;
         ui_message_ = "Workout " + std::to_string(next.index + 1U) + " of " +
                       std::to_string(cached_workouts_.size()) + " selected";
       }
@@ -590,10 +676,24 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       }
       if (status) {
         stop_confirmation_active_ = true;
+        discard_confirmation_active_ = false;
         ui_message_ = "Choose END & SAVE or CANCEL";
       }
       break;
+    case UiCommandType::kOpenDiscardConfirmation:
+      if (ride_state == RideState::kRunning) {
+        status = coordinator_.pause(PauseReason::kUser, now_ms);
+      } else if (ride_state != RideState::kPaused) {
+        status = Status::failure(ErrorCode::kConflict, "there is no active ride to discard");
+      }
+      if (status) {
+        stop_confirmation_active_ = false;
+        discard_confirmation_active_ = true;
+        ui_message_ = "Choose DISCARD RIDE or KEEP PAUSED";
+      }
+      break;
     case UiCommandType::kOpenDevices:
+      workout_preview_active_ = false;
       history_active_ = false;
       history_detail_active_ = false;
       pairing_active_ = true;
@@ -615,6 +715,7 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       } else if (!history_ready_) {
         status = Status::failure(ErrorCode::kStorage, "history catalog is unavailable");
       } else {
+        workout_preview_active_ = false;
         pairing_active_ = false;
         pairing_scan_pending_ = false;
         next_pairing_scan_attempt_ms_ = 0U;
@@ -629,6 +730,7 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
         break;
       }
       pairing_active_ = false;
+      workout_preview_active_ = false;
       history_active_ = false;
       history_detail_active_ = true;
       history_detail_uuid_ = entries[command.index].uuid;
@@ -658,10 +760,13 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       const StartTimeAnchor anchor{time_snapshot.utc_ms, time_snapshot.trusted,
                                   static_cast<std::uint8_t>(time_snapshot.quality)};
       const StorageCapacity capacity = check_storage_capacity(
-          "/storage", session_reservation_bytes());
+          storage_root_, session_reservation_bytes());
       status = coordinator_.start(now_ms, anchor, sensors_, capacity.enough,
                                   settings_.current().secrets.athlete_id);
-      if (status) artifacts_finalized_ = false;
+      if (status) {
+        artifacts_finalized_ = false;
+        workout_preview_active_ = false;
+      }
       break;
     }
     case UiCommandType::kPause:
@@ -685,7 +790,32 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
       status = coordinator_.end_and_save(now_ms);
       stop_confirmation_active_ = false;
       break;
+    case UiCommandType::kDiscardWorkout:
+      if (!discard_confirmation_active_) {
+        status = Status::failure(ErrorCode::kConflict, "confirm DISCARD RIDE before leaving");
+        break;
+      }
+      if (ride_state == RideState::kComplete) {
+        status = Status::failure(ErrorCode::kConflict, "saved rides cannot be discarded");
+        break;
+      }
+      ui_busy_ = true;
+      ui_message_ = "Discarding ride...";
+      present_runtime_ui(now_ms);
+      status = coordinator_.discard(now_ms);
+      if (status) {
+        discard_confirmation_active_ = false;
+        workout_preview_active_ = false;
+        artifacts_finalized_ = false;
+        ui_message_.clear();
+      }
+      break;
     case UiCommandType::kBack:
+      if (discard_confirmation_active_) {
+        discard_confirmation_active_ = false;
+        ui_message_ = "Ride paused";
+        break;
+      }
       if (stop_confirmation_active_) {
         stop_confirmation_active_ = false;
         ui_message_ = "Ride paused";
@@ -709,6 +839,11 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
         history_active_ = false;
         break;
       }
+      if (workout_preview_active_ && ride_state == RideState::kPreview) {
+        workout_preview_active_ = false;
+        ui_message_.clear();
+        break;
+      }
       if (coordinator_.snapshot().state == RideState::kComplete) {
         if (!artifacts_finalized_) {
           status = Status::failure(ErrorCode::kStorage, "Local ride files still pending; retry before leaving");
@@ -722,6 +857,7 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
         history_detail_active_ = false;
         history_detail_uuid_.clear();
         stop_confirmation_active_ = false;
+        workout_preview_active_ = false;
       }
       break;
     default:
@@ -737,9 +873,12 @@ void FirmwareApp::process_ui_command(const UiCommand& command, std::uint64_t now
     }
     ui_busy_ = false;
   }
+  if (command.type == UiCommandType::kDiscardWorkout) {
+    ui_busy_ = false;
+  }
   if (!status) {
     ui_message_ = status.error->message;
-    ESP_LOGW("trainer_app", "UI action %u was not applied: %s",
+    APP_LOGW("trainer_app", "UI action %u was not applied: %s",
              static_cast<unsigned>(command.type), status.error->message.c_str());
   }
 }
@@ -824,7 +963,7 @@ void FirmwareApp::reconcile_finalized_sessions() {
 
     const auto recovered = journal_.read_session(uuid);
     if (!recovered) {
-      ESP_LOGW("trainer_app", "finalized session %s could not be read for publication: %s",
+      APP_LOGW("trainer_app", "finalized session %s could not be read for publication: %s",
                uuid.c_str(), recovered.error->message.c_str());
       continue;
     }
@@ -832,7 +971,7 @@ void FirmwareApp::reconcile_finalized_sessions() {
     if (!published) {
       // Keep the immutable journal session in place. The same reconciliation
       // path retries it on the next boot or whenever runtime storage recovers.
-      ESP_LOGW("trainer_app", "finalized session %s publication deferred: %s",
+      APP_LOGW("trainer_app", "finalized session %s publication deferred: %s",
                uuid.c_str(), published.error->message.c_str());
     }
   }
@@ -850,10 +989,10 @@ void FirmwareApp::reconcile_pending_fits() {
     const auto found = std::find_if(upload_queue_.entries().begin(), upload_queue_.entries().end(),
                                     [&](const UploadEntry& entry) { return entry.session_uuid == uuid; });
     if (found == upload_queue_.entries().end()) continue;
-    const auto bytes = read_fit_for_upload(*found);
+    const auto bytes = read_fit_for_upload(*found, storage_root_);
     if (bytes) {
       const Status ready = upload_queue_.mark_fit_ready(uuid);
-      if (!ready) ESP_LOGW("trainer_app", "pending FIT could not be made upload-ready");
+      if (!ready) APP_LOGW("trainer_app", "pending FIT could not be made upload-ready");
     }
   }
 }
@@ -864,7 +1003,7 @@ void FirmwareApp::process_pending_upload(std::uint64_t now_ms) {
   const bool ride_running = session_is_active(coordinator_.snapshot().state);
   const auto due = upload_queue_.next_due(now_ms, ride_running, wifi_.connected());
   if (!due) return;
-  const auto bytes = read_fit_for_upload(*due);
+  const auto bytes = read_fit_for_upload(*due, storage_root_);
   if (!bytes) {
     const Status marked = upload_queue_.mark_uploading(due->session_uuid, now_ms);
     if (marked) {
@@ -885,16 +1024,38 @@ void FirmwareApp::process_pending_upload(std::uint64_t now_ms) {
                                  response.value->retry_after_s)
       : classify_upload_response(0, "");
   const Status applied = upload_queue_.apply_result(due->session_uuid, result, now_ms);
-  if (!applied) ESP_LOGW("trainer_app", "upload result could not be persisted");
+  if (!applied) APP_LOGW("trainer_app", "upload result could not be persisted");
   next_upload_attempt_ms_ = now_ms + 1000U;
 }
 
+#ifdef ESP_PLATFORM
 void FirmwareApp::runtime_loop() {
   while (true) {
-    const std::uint64_t now_ms = monotonic_ms();
+    (void)runtime_step(monotonic_ms());
+    vTaskDelay(pdMS_TO_TICKS(kRuntimePeriodMs));
+  }
+}
+#endif
+
+Status FirmwareApp::runtime_step(std::uint64_t now_ms) {
+#ifndef ESP_PLATFORM
+  auto& platform = HostPlatformServices::instance();
+  if (platform.monotonic_ms() < now_ms) platform.set_monotonic_ms(now_ms);
+#endif
+  if (!runtime_started_) {
+    if (setup_active_) return Status::ok();
+    return Status::failure(ErrorCode::kConflict, "runtime is not started");
+  }
+  const std::uint64_t effective_now_ms = std::max(now_ms, monotonic_ms());
+  return runtime_iteration(effective_now_ms);
+}
+
+Status FirmwareApp::runtime_iteration(std::uint64_t now_ms) {
+  runtime_now_ms_ = now_ms;
+    trace_event("runtime.step t=" + std::to_string(now_ms));
     reconcile_pending_fits();
     const Status ble_status = ble_.poll(now_ms);
-    if (!ble_status) ESP_LOGW("trainer_app", "BLE poll deferred: %s", ble_status.error->message.c_str());
+    if (!ble_status) APP_LOGW("trainer_app", "BLE poll deferred: %s", ble_status.error->message.c_str());
     consume_ble_notifications();
 
     if (!capabilities_published_ && ble_.trainer_services_ready() &&
@@ -902,18 +1063,20 @@ void FirmwareApp::runtime_loop() {
         coordinator_.snapshot().state != RideState::kPaused) {
       const Status capabilities = coordinator_.set_trainer_capabilities(ble_.trainer_capabilities());
       if (capabilities) capabilities_published_ = true;
-      else ESP_LOGW("trainer_app", "trainer capabilities are not ride-ready: %s",
+      else APP_LOGW("trainer_app", "trainer capabilities are not ride-ready: %s",
                     capabilities.error->message.c_str());
     }
     load_cached_workout_if_available();
 
     while (const auto command = display_.pop_command()) {
-      process_ui_command(*command, monotonic_ms());
+      process_ui_command(*command, now_ms);
     }
-    const std::uint64_t input_now_ms = monotonic_ms();
+    now_ms = std::max(now_ms, monotonic_ms());
+    const std::uint64_t input_now_ms = now_ms;
     const ButtonGestureEvent boot_event = boot_button_.update(
         board_.boot_pressed(), input_now_ms);
     if (boot_event == ButtonGestureEvent::kShortPress) {
+      trace_event("boot.short_press t=" + std::to_string(input_now_ms));
       const UiCommandType command = coordinator_.snapshot().state == RideState::kRunning
                                         ? UiCommandType::kPause
                                         : UiCommandType::kBack;
@@ -922,7 +1085,8 @@ void FirmwareApp::runtime_loop() {
       // GPIO0 is also the boot strap. Runtime long presses have no reset,
       // erase, or provisioning meaning until a separately validated gesture
       // policy exists; ignoring them keeps a rider-safe boundary.
-      ESP_LOGW("trainer_app", "BOOT long press ignored during runtime");
+      APP_LOGW("trainer_app", "BOOT long press ignored during runtime");
+      trace_event("boot.long_press_ignored t=" + std::to_string(input_now_ms));
     }
     if (pairing_active_ && pairing_scan_pending_ &&
         !ble_.connection_manager().scanning() && now_ms >= next_pairing_scan_attempt_ms_) {
@@ -937,79 +1101,76 @@ void FirmwareApp::runtime_loop() {
         pairing_scan_pending_ = false;
         next_pairing_scan_attempt_ms_ = 0U;
         ui_message_ = scan.error->message;
-        ESP_LOGW("trainer_app", "automatic BLE scan retry failed: %s",
+        APP_LOGW("trainer_app", "automatic BLE scan retry failed: %s",
                  scan.error->message.c_str());
       }
     }
     const RideState state_before_auto_retry = coordinator_.snapshot().state;
     if (!ble_.connection_manager().network_sync_blocked() &&
         sync_retry_.due(now_ms, session_is_active(state_before_auto_retry), ui_busy_)) {
-      ESP_LOGI("trainer_app", "automatic workout sync retry starting (failure=%u)",
+      APP_LOGI("trainer_app", "automatic workout sync retry starting (failure=%u)",
                static_cast<unsigned>(sync_retry_.failures()));
       sync_retry_.begin();
       const Status retry = retry_connection_and_sync(now_ms);
       sync_retry_.finish(now_ms, static_cast<bool>(retry));
       if (!retry) {
         ui_message_ = retry.error->message;
-        ESP_LOGW("trainer_app", "automatic workout sync retry failed: %s",
+        APP_LOGW("trainer_app", "automatic workout sync retry failed: %s",
                  retry.error->message.c_str());
       }
     }
-    const Status tick = coordinator_.tick(monotonic_ms(), sensors_);
-    if (!tick) ESP_LOGW("trainer_app", "session tick fault: %s", tick.error->message.c_str());
+    now_ms = std::max(now_ms, monotonic_ms());
+    const Status tick = coordinator_.tick(now_ms, sensors_);
+    now_ms = std::max(now_ms, monotonic_ms());
+    if (!tick) APP_LOGW("trainer_app", "session tick fault: %s", tick.error->message.c_str());
     if (coordinator_.snapshot().state == RideState::kComplete && !artifacts_finalized_) {
       const Status artifacts = finalize_session_artifacts();
-      if (!artifacts) ESP_LOGW("trainer_app", "session artifacts deferred: %s", artifacts.error->message.c_str());
+      if (!artifacts) APP_LOGW("trainer_app", "session artifacts deferred: %s", artifacts.error->message.c_str());
     }
     process_pending_upload(now_ms);
 
+    runtime_now_ms_ = now_ms;
     present_runtime_ui(now_ms);
-    vTaskDelay(pdMS_TO_TICKS(kRuntimePeriodMs));
-  }
+  return Status::ok();
 }
 
-#endif
-
 void FirmwareApp::start() {
+  startup_error_.clear();
 #ifdef ESP_PLATFORM
-  ESP_LOGI("trainer_app", "reset reason=%d", static_cast<int>(esp_reset_reason()));
+  APP_LOGI("trainer_app", "reset reason=%d", static_cast<int>(esp_reset_reason()));
 #endif
   const Status nvs_status = nvs_.initialize();
-#ifdef ESP_PLATFORM
   if (!nvs_status) {
-    ESP_LOGE("trainer_app", "settings storage unavailable: %s", nvs_status.error->message.c_str());
+    startup_error_ = nvs_status.error->message;
+    APP_LOGE("trainer_app", "settings storage unavailable: %s", nvs_status.error->message.c_str());
     return;
   }
-#else
-  (void)nvs_status;
-#endif
   const Status settings_status = nvs_.load(&settings_);
-#ifdef ESP_PLATFORM
   if (!settings_status) {
-    ESP_LOGE("trainer_app", "persisted settings are invalid: %s", settings_status.error->message.c_str());
+    startup_error_ = settings_status.error->message;
+    APP_LOGE("trainer_app", "persisted settings are invalid: %s", settings_status.error->message.c_str());
     return;
   }
-#else
-  (void)settings_status;
-#endif
   const Status storage_status = storage_.mount();
-#ifdef ESP_PLATFORM
   if (!storage_status) {
-    ESP_LOGE("trainer_app", "recording storage unavailable: %s", storage_status.error->message.c_str());
+    startup_error_ = storage_status.error->message;
+    APP_LOGE("trainer_app", "recording storage unavailable: %s", storage_status.error->message.c_str());
     return;
   }
   const Status journal_status = journal_.initialize();
   if (!journal_status) {
-    ESP_LOGE("trainer_app", "session journal unavailable: %s", journal_status.error->message.c_str());
+    startup_error_ = journal_status.error->message;
+    APP_LOGE("trainer_app", "session journal unavailable: %s", journal_status.error->message.c_str());
     return;
   }
   std::optional<RecoveredSession> recovered_interrupted;
   if (journal_.has_current_session()) {
     const auto recovered = journal_.recover_current();
     if (!recovered) {
+      startup_error_ = recovered.error->message;
       // Keep the current directory intact for later forensic recovery. A
       // corrupt manifest must never be replaced or auto-formatted at boot.
-      ESP_LOGE("trainer_app", "interrupted session could not be recovered: %s",
+      APP_LOGE("trainer_app", "interrupted session could not be recovered: %s",
                recovered.error->message.c_str());
       return;
     }
@@ -1020,51 +1181,56 @@ void FirmwareApp::start() {
   const Status history_status = history_.load();
   history_ready_ = static_cast<bool>(history_status);
   if (!history_status) {
-    ESP_LOGW("trainer_app", "history catalog unavailable: %s", history_status.error->message.c_str());
+    APP_LOGW("trainer_app", "history catalog unavailable: %s", history_status.error->message.c_str());
   }
   const Status fit_store_status = fit_store_.initialize();
   fit_store_ready_ = static_cast<bool>(fit_store_status);
   if (!fit_store_status) {
-    ESP_LOGW("trainer_app", "FIT artifact store unavailable: %s", fit_store_status.error->message.c_str());
+    APP_LOGW("trainer_app", "FIT artifact store unavailable: %s", fit_store_status.error->message.c_str());
   }
   // Retry deadlines are relative waits on disk and must be rebased into this
   // boot's monotonic epoch before the worker considers them due.
   const Status upload_queue_status = upload_queue_.load(monotonic_ms());
   upload_queue_ready_ = static_cast<bool>(upload_queue_status);
   if (!upload_queue_status) {
-    ESP_LOGW("trainer_app", "upload queue unavailable: %s", upload_queue_status.error->message.c_str());
+    APP_LOGW("trainer_app", "upload queue unavailable: %s", upload_queue_status.error->message.c_str());
   }
   if (recovered_interrupted.has_value()) {
     if (!history_ready_ || !fit_store_ready_ || !upload_queue_ready_) {
-      ESP_LOGE("trainer_app", "recovered session artifacts cannot be published while storage services are unavailable");
+      startup_error_ = "recovered session artifact storage is unavailable";
+      APP_LOGE("trainer_app", "recovered session artifacts cannot be published while storage services are unavailable");
       return;
     }
     const JournalManifest interrupted_manifest = recovered_interrupted->manifest;
     const std::size_t recovered_sample_count = recovered_interrupted->samples.size();
     const Status artifacts = publish_recovered_session_artifacts(std::move(*recovered_interrupted));
     if (!artifacts) {
-      ESP_LOGE("trainer_app", "recovered session artifacts could not be published: %s",
+      startup_error_ = artifacts.error->message;
+      APP_LOGE("trainer_app", "recovered session artifacts could not be published: %s",
                artifacts.error->message.c_str());
       return;
     }
     const Status published = journal_.finalize(interrupted_manifest);
     if (!published) {
-      ESP_LOGE("trainer_app", "recovered session could not be preserved: %s",
+      startup_error_ = published.error->message;
+      APP_LOGE("trainer_app", "recovered session could not be preserved: %s",
                published.error->message.c_str());
       return;
     }
-    ESP_LOGW("trainer_app", "preserved interrupted session with %u valid samples",
+    APP_LOGW("trainer_app", "preserved interrupted session with %u valid samples",
              static_cast<unsigned>(recovered_sample_count));
   }
   reconcile_finalized_sessions();
   const Status cache_status = workout_cache_.initialize();
   if (!cache_status) {
-    ESP_LOGE("trainer_app", "workout cache unavailable: %s", cache_status.error->message.c_str());
+    startup_error_ = cache_status.error->message;
+    APP_LOGE("trainer_app", "workout cache unavailable: %s", cache_status.error->message.c_str());
     return;
   }
   const Status board_status = board_.initialize();
   if (!board_status) {
-    ESP_LOGW("trainer_app", "platform foundation is gated: %s", board_status.error->message.c_str());
+    startup_error_ = board_status.error->message;
+    APP_LOGW("trainer_app", "platform foundation is gated: %s", board_status.error->message.c_str());
     return;
   }
   board_v1::RtcReading rtc;
@@ -1073,19 +1239,24 @@ void FirmwareApp::start() {
     const Status time_status = time_.set_from_rtc(rtc.utc_ms, !rtc.oscillator_stopped);
     if (!time_status) {
       time_.invalidate();
-      ESP_LOGW("trainer_app", "RTC time is outside trusted bounds");
+      APP_LOGW("trainer_app", "RTC time is outside trusted bounds");
     }
   } else {
     time_.invalidate();
     if (rtc_status.error.has_value()) {
-      ESP_LOGW("trainer_app", "trusted RTC time unavailable: %s", rtc_status.error->message.c_str());
+      APP_LOGW("trainer_app", "trusted RTC time unavailable: %s", rtc_status.error->message.c_str());
     }
   }
+#if defined(TRAINER_LOOP_HOST_SIM)
+  const Status display_status = display_.initialize_host();
+#else
   const Status display_status = display_.initialize(board_.display_panel(),
-                                                   board_.display_io(), &board_);
+                                                     board_.display_io(), &board_);
+#endif
   const Status wifi_status = wifi_.initialize();
   if (!display_status || !wifi_status) {
-    ESP_LOGE("trainer_app", "runtime subsystem initialization failed");
+    startup_error_ = !display_status ? display_status.error->message : wifi_status.error->message;
+    APP_LOGE("trainer_app", "runtime subsystem initialization failed");
     return;
   }
   provisioning_.set_commit_handler([this](const SetupCandidate& candidate) {
@@ -1096,16 +1267,19 @@ void FirmwareApp::start() {
   if (!settings_.has_committed_settings()) {
     const Status setup = provisioning_.start(monotonic_ms());
     if (!setup) {
-      ESP_LOGE("trainer_app", "protected setup AP could not start: %s", setup.error->message.c_str());
+      startup_error_ = setup.error->message;
+      APP_LOGE("trainer_app", "protected setup AP could not start: %s", setup.error->message.c_str());
       return;
     }
     const Status setup_display = display_.show_setup(provisioning_.credentials());
     if (!setup_display) {
-      ESP_LOGE("trainer_app", "setup credentials could not be displayed: %s",
+      startup_error_ = setup_display.error->message;
+      APP_LOGE("trainer_app", "setup credentials could not be displayed: %s",
                setup_display.error->message.c_str());
       return;
     }
-    ESP_LOGI("trainer_app", "unprovisioned device awaiting setup at %s",
+    setup_active_ = true;
+    APP_LOGI("trainer_app", "unprovisioned device awaiting setup at %s",
              provisioning_.credentials().url.c_str());
     return;
   }
@@ -1113,21 +1287,23 @@ void FirmwareApp::start() {
   configure_timezone(settings_.current().profile);
   const Status ble_status = ble_.initialize();
   if (!ble_status) {
-    ESP_LOGE("trainer_app", "BLE initialization failed: %s", ble_status.error->message.c_str());
+    startup_error_ = ble_status.error->message;
+    APP_LOGE("trainer_app", "BLE initialization failed: %s", ble_status.error->message.c_str());
     return;
   }
   if (settings_.current().trainer_device.has_value()) {
     const Status selected = ble_.select_device(*settings_.current().trainer_device);
-    if (!selected) ESP_LOGW("trainer_app", "saved trainer identity could not be restored");
+    if (!selected) APP_LOGW("trainer_app", "saved trainer identity could not be restored");
   }
   if (settings_.current().heart_rate_device.has_value()) {
     const Status selected = ble_.select_device(*settings_.current().heart_rate_device);
-    if (!selected) ESP_LOGW("trainer_app", "saved heart-rate identity could not be restored");
+    if (!selected) APP_LOGW("trainer_app", "saved heart-rate identity could not be restored");
   }
-  ESP_LOGI("trainer_app", "TrainerLoop foundation started with durable storage");
+  APP_LOGI("trainer_app", "TrainerLoop foundation started with durable storage");
   const Status ready = coordinator_.enter_ready();
   if (!ready) {
-    ESP_LOGE("trainer_app", "session coordinator could not enter Ready: %s",
+    startup_error_ = ready.error->message;
+    APP_LOGE("trainer_app", "session coordinator could not enter Ready: %s",
              ready.error->message.c_str());
     return;
   }
@@ -1136,9 +1312,80 @@ void FirmwareApp::start() {
   // performs the same bounded sync sequence in the background, preserving
   // cached/offline riding while avoiding a long startup splash screen.
   sync_retry_.request_after(monotonic_ms(), kAutomaticSyncStartupDelayMs);
-  ESP_LOGI("trainer_app", "automatic workout sync armed after startup delay");
+  APP_LOGI("trainer_app", "automatic workout sync armed after startup delay");
+  if (runtime_started_) (void)runtime_step(monotonic_ms());
+}
+
+void FirmwareApp::boot_input(bool pressed) {
+#ifndef ESP_PLATFORM
+  HostPlatformServices::instance().set_boot_pressed(pressed);
 #else
-  (void)storage_status;
+  (void)pressed;
+#endif
+}
+
+#if defined(TRAINER_LOOP_HOST_SIM)
+Status FirmwareApp::set_simulated_utc(std::int64_t utc_ms, bool trusted) {
+  HostPlatformServices::instance().set_utc_ms(utc_ms);
+  if (!trusted) {
+    time_.invalidate();
+    return Status::ok();
+  }
+  return time_.set_from_rtc(utc_ms, true);
+}
+#endif
+
+Status FirmwareApp::setup(const SetupCandidate& candidate) {
+  if (!provisioning_.running() || !provisioning_.commit_handler()) {
+    return Status::failure(ErrorCode::kConflict, "setup provisioning is not active");
+  }
+  const Status committed = provisioning_.commit_handler()(candidate);
+  if (!committed) return committed;
+  setup_active_ = false;
+  const Status stopped = provisioning_.stop();
+  if (!stopped) return stopped;
+  return Status::ok();
+}
+
+UiSnapshot FirmwareApp::snapshot() const {
+  UiSnapshot ui = make_runtime_ui_snapshot(runtime_now_ms_);
+  if (setup_active_ || provisioning_.running()) {
+    ui.screen = UiScreen::kSetup;
+  } else if (!runtime_started_ && !startup_error_.empty()) {
+    ui.screen = UiScreen::kError;
+    ui.fault = startup_error_;
+  }
+  return ui;
+}
+
+void FirmwareApp::trace_event(std::string event) {
+#if defined(TRAINER_LOOP_HOST_SIM)
+  constexpr std::size_t kTraceCapacity = 4096U;
+  std::ofstream output(storage_root_ + "/../events.jsonl", std::ios::app);
+  if (output) {
+    output << "{\"source\":\"firmware\",\"event\":\"";
+    for (const unsigned char c : event) {
+      switch (c) {
+        case '"': output << "\\\""; break;
+        case '\\': output << "\\\\"; break;
+        case '\n': output << "\\n"; break;
+        case '\r': output << "\\r"; break;
+        case '\t': output << "\\t"; break;
+        default:
+          if (c < 0x20U) {
+            constexpr char kHex[] = "0123456789abcdef";
+            output << "\\u00" << kHex[c >> 4U] << kHex[c & 0x0fU];
+          } else {
+            output << static_cast<char>(c);
+          }
+      }
+    }
+    output << "\"}\n";
+  }
+  if (event_trace_.size() == kTraceCapacity) event_trace_.erase(event_trace_.begin());
+  event_trace_.push_back(std::move(event));
+#else
+  (void)event;
 #endif
 }
 

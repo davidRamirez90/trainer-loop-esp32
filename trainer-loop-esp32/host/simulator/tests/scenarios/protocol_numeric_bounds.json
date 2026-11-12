@@ -1,0 +1,14 @@
+{
+  "name": "protocol numeric fields reject out-of-range values and reset restores FTMS defaults",
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"capabilities","min_watts":32768},"error":"min_watts is outside its integer range"},
+    {"command":{"op":"capabilities","max_watts":-32769},"error":"max_watts is outside its integer range"},
+    {"command":{"op":"capabilities","increment_watts":-1},"error":"increment_watts is outside its integer range"},
+    {"command":{"op":"capabilities","increment_watts":65536},"error":"increment_watts is outside its integer range"},
+    {"command":{"op":"http","status":99},"error":"status is outside its integer range"},
+    {"command":{"op":"http","status":600},"error":"status is outside its integer range"},
+    {"command":{"op":"capabilities","power_range":true,"min_watts":400,"max_watts":200,"increment_watts":0},"expect":{"trainer_capabilities.power_range_present":true,"trainer_capabilities.min_watts":400,"trainer_capabilities.max_watts":200,"trainer_capabilities.increment_watts":0}},
+    {"command":{"op":"reset"},"expect":{"screen":"Setup","trainer_capabilities.min_watts":50,"trainer_capabilities.max_watts":1000,"trainer_capabilities.increment_watts":1}}
+  ]
+}

@@ -14,6 +14,8 @@
 
 namespace trainer_loop {
 
+bool WifiStation::connected() const { return connected_; }
+
 WifiStation::~WifiStation() {
   if (!event_handlers_registered_) return;
   (void)esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &WifiStation::event_handler);
@@ -161,14 +163,6 @@ Status WifiStation::disconnect() {
 }  // namespace trainer_loop
 
 #else
-
-namespace trainer_loop {
-WifiStation::~WifiStation() = default;
-Status WifiStation::initialize() { initialized_ = true; return Status::failure(ErrorCode::kUnsupported, "Wi-Fi requires ESP-IDF"); }
-Status WifiStation::connect(const std::string&, const std::string&) { return Status::failure(ErrorCode::kUnsupported, "Wi-Fi requires ESP-IDF"); }
-Status WifiStation::verify_credentials(const std::string&, const std::string&, std::uint32_t) { return Status::failure(ErrorCode::kUnsupported, "Wi-Fi requires ESP-IDF"); }
-Status WifiStation::wait_for_connection(std::uint32_t) { return Status::failure(ErrorCode::kUnsupported, "Wi-Fi requires ESP-IDF"); }
-Status WifiStation::disconnect() { connected_ = false; return Status::ok(); }
-}  // namespace trainer_loop
+#include "../host/simulator/services_wifi.inc"
 
 #endif

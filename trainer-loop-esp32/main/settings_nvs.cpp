@@ -264,14 +264,6 @@ Status NvsSettingsBackend::load(SettingsStore* store) const {
 }  // namespace trainer_loop
 
 #else
-
-namespace trainer_loop {
-
-Status NvsSettingsBackend::initialize() { return Status::failure(ErrorCode::kUnsupported, "NVS requires ESP-IDF"); }
-Status NvsSettingsBackend::load(SettingsStore*) const { return Status::failure(ErrorCode::kUnsupported, "NVS requires ESP-IDF"); }
-Status NvsSettingsBackend::save(const SettingsGeneration&) const { return Status::failure(ErrorCode::kUnsupported, "NVS requires ESP-IDF"); }
-bool NvsSettingsBackend::encrypted_at_rest() const { return false; }
-
-}  // namespace trainer_loop
+#include "../host/simulator/services_settings.inc"
 
 #endif

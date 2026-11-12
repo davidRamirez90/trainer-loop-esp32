@@ -1,0 +1,742 @@
+{
+  "setup": {
+    "sha256": "baa242e7d6c1098e935c6c82cde19a705952bfaef56a8b907ea34783000c29bb",
+    "screen": "Setup",
+    "controls": []
+  },
+  "home-empty": {
+    "sha256": "51a2bb259eafab8dfcf4bbaa55dc57e19c2e128ab35b72922fe3a4f0a613689b",
+    "screen": "Home",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "RETRY",
+        "x": 16,
+        "y": 304,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "extra-0",
+        "text": "DEVICES",
+        "x": 16,
+        "y": 376,
+        "width": 104,
+        "height": 48,
+        "enabled": false
+      },
+      {
+        "id": "extra-1",
+        "text": "HISTORY",
+        "x": 132,
+        "y": 376,
+        "width": 104,
+        "height": 48,
+        "enabled": false
+      },
+      {
+        "id": "extra-2",
+        "text": "SETTINGS",
+        "x": 248,
+        "y": 376,
+        "width": 104,
+        "height": 48,
+        "enabled": false
+      }
+    ]
+  },
+  "home-ready": {
+    "sha256": "aeb69f02a1679a547cc79e1c2e436a7a0128f6a6e2f675a161dcb72327da38dc",
+    "screen": "Home",
+    "controls": [
+      {
+        "id": "workout-card",
+        "text": "Threshold Builder",
+        "x": 16,
+        "y": 72,
+        "width": 336,
+        "height": 154,
+        "enabled": true
+      },
+      {
+        "id": "extra-0",
+        "text": "DEVICES",
+        "x": 16,
+        "y": 344,
+        "width": 104,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "extra-1",
+        "text": "HISTORY",
+        "x": 132,
+        "y": 344,
+        "width": 104,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "extra-2",
+        "text": "SETTINGS",
+        "x": 248,
+        "y": 344,
+        "width": 104,
+        "height": 48,
+        "enabled": true
+      }
+    ]
+  },
+  "home-busy": {
+    "sha256": "1111c929b55e978568eaabd8dfd41215e9d9242f8ea9cdbb5c4b26fc5966d2d2",
+    "screen": "Home",
+    "controls": [
+      {
+        "id": "workout-card",
+        "text": "Threshold Builder",
+        "x": 16,
+        "y": 72,
+        "width": 336,
+        "height": 154,
+        "enabled": false
+      },
+      {
+        "id": "extra-0",
+        "text": "DEVICES",
+        "x": 16,
+        "y": 344,
+        "width": 104,
+        "height": 48,
+        "enabled": false
+      },
+      {
+        "id": "extra-1",
+        "text": "HISTORY",
+        "x": 132,
+        "y": 344,
+        "width": 104,
+        "height": 48,
+        "enabled": false
+      },
+      {
+        "id": "extra-2",
+        "text": "SETTINGS",
+        "x": 248,
+        "y": 344,
+        "width": 104,
+        "height": 48,
+        "enabled": false
+      }
+    ]
+  },
+  "home-offline": {
+    "sha256": "3cb19ce9995525f146e4c5a77b235ee32bb209d2d33fcc70246c41c6a0739efe",
+    "screen": "Home",
+    "controls": [
+      {
+        "id": "workout-card",
+        "text": "Threshold Builder",
+        "x": 16,
+        "y": 72,
+        "width": 336,
+        "height": 154,
+        "enabled": true
+      },
+      {
+        "id": "extra-0",
+        "text": "DEVICES",
+        "x": 16,
+        "y": 344,
+        "width": 104,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "extra-1",
+        "text": "HISTORY",
+        "x": 132,
+        "y": 344,
+        "width": 104,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "extra-2",
+        "text": "SETTINGS",
+        "x": 248,
+        "y": 344,
+        "width": 104,
+        "height": 48,
+        "enabled": true
+      }
+    ]
+  },
+  "pairing-empty": {
+    "sha256": "70a47efe85224c94591e3da40217b0968649a6ffdcd599b6f1b7b05f1c4dc94f",
+    "screen": "Pairing",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "SCAN AGAIN",
+        "x": 16,
+        "y": 344,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "secondary",
+        "text": "BACK",
+        "x": 16,
+        "y": 400,
+        "width": 336,
+        "height": 40,
+        "enabled": true
+      }
+    ]
+  },
+  "pairing-results": {
+    "sha256": "04af0e6a81c9851ef3c382c2e713f16120e8a963b40d74478d3b5083c339abe8",
+    "screen": "Pairing",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "SCAN AGAIN",
+        "x": 16,
+        "y": 344,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "secondary",
+        "text": "BACK",
+        "x": 16,
+        "y": 400,
+        "width": 336,
+        "height": 40,
+        "enabled": true
+      },
+      {
+        "id": "device-0",
+        "text": "Trainer  |  Wahoo KICKR\nSignal -48 dBm",
+        "x": 16,
+        "y": 94,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "device-1",
+        "text": "Trainer  |  Tacx NEO\nSignal -62 dBm",
+        "x": 16,
+        "y": 150,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "device-2",
+        "text": "Heart rate  |  HRM-Pro\nSignal -71 dBm",
+        "x": 16,
+        "y": 206,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      }
+    ]
+  },
+  "pairing-scanning": {
+    "sha256": "dc8bb32131420e7a862c239103752a80b8dc02f06fe4f59991e89062e046a4a2",
+    "screen": "Pairing",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "STOP SCAN",
+        "x": 16,
+        "y": 344,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "secondary",
+        "text": "BACK",
+        "x": 16,
+        "y": 400,
+        "width": 336,
+        "height": 40,
+        "enabled": true
+      }
+    ]
+  },
+  "preview": {
+    "sha256": "86e34e0dce79acb71578349c047dc6b262eca0feb73c1181fde637f27a9fd214",
+    "screen": "Workout Preview",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "START WORKOUT",
+        "x": 16,
+        "y": 320,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "extra-0",
+        "text": "BACK",
+        "x": 16,
+        "y": 376,
+        "width": 160,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "extra-1",
+        "text": "NEXT",
+        "x": 192,
+        "y": 376,
+        "width": 160,
+        "height": 48,
+        "enabled": true
+      }
+    ]
+  },
+  "preview-unavailable": {
+    "sha256": "0b26ffa0649cd3724491b270bc66d918dd6952b86df9254c9a5fc927c3bd9d1d",
+    "screen": "Workout Preview",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "START UNAVAILABLE",
+        "x": 16,
+        "y": 320,
+        "width": 336,
+        "height": 48,
+        "enabled": false
+      },
+      {
+        "id": "extra-0",
+        "text": "BACK",
+        "x": 16,
+        "y": 376,
+        "width": 160,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "extra-1",
+        "text": "NEXT",
+        "x": 192,
+        "y": 376,
+        "width": 160,
+        "height": 48,
+        "enabled": true
+      }
+    ]
+  },
+  "active": {
+    "sha256": "73f5a8dd06e957ceae9f401652b47eed07ed42439655366dea35b91979e4c747",
+    "screen": "Active",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "PAUSE",
+        "x": 16,
+        "y": 384,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      }
+    ]
+  },
+  "active-no-heart-rate": {
+    "sha256": "21e64e2d36a97dfd2985ccd2485443806c73d63ec1d88b4d75247f71ba83832b",
+    "screen": "Active",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "PAUSE",
+        "x": 16,
+        "y": 384,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      }
+    ]
+  },
+  "active-no-power": {
+    "sha256": "89b8a83d3f80f567802d94d4fe7ae06dbf8abd987d78d947296125b07b0ed2db",
+    "screen": "Active",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "PAUSE",
+        "x": 16,
+        "y": 384,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      }
+    ]
+  },
+  "paused": {
+    "sha256": "f71791549697a6b498a85781b2232e051898c10b551b574e1b1f16d20835a3d9",
+    "screen": "Paused",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "RESUME",
+        "x": 16,
+        "y": 332,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "secondary",
+        "text": "END & SAVE",
+        "x": 16,
+        "y": 396,
+        "width": 336,
+        "height": 40,
+        "enabled": true
+      },
+      {
+        "id": "extra-0",
+        "text": "DISCARD RIDE",
+        "x": 16,
+        "y": 276,
+        "width": 336,
+        "height": 40,
+        "enabled": true
+      }
+    ]
+  },
+  "paused-trainer-lost": {
+    "sha256": "7bf4a2d1a10fe8541ecf384d12a24530ce09e0c1386065e71b8919b158bf3bf8",
+    "screen": "Paused",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "END & SAVE",
+        "x": 16,
+        "y": 344,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "extra-0",
+        "text": "DISCARD RIDE",
+        "x": 16,
+        "y": 300,
+        "width": 336,
+        "height": 40,
+        "enabled": true
+      }
+    ]
+  },
+  "stop-confirmation": {
+    "sha256": "e93c5104b662026ecde61993dd9c22897f9ffc508e511a346d4d31109a1d75f3",
+    "screen": "Stop Confirmation",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "END & SAVE",
+        "x": 16,
+        "y": 344,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "secondary",
+        "text": "STAY PAUSED",
+        "x": 16,
+        "y": 400,
+        "width": 336,
+        "height": 40,
+        "enabled": true
+      }
+    ]
+  },
+  "discard-confirmation": {
+    "sha256": "ebce624b4a6ec5faff04a10f42cd03118f655bc0f5ec309056f781fb07f3084a",
+    "screen": "Discard Confirmation",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "DISCARD RIDE",
+        "x": 16,
+        "y": 344,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "secondary",
+        "text": "KEEP PAUSED",
+        "x": 16,
+        "y": 400,
+        "width": 336,
+        "height": 40,
+        "enabled": true
+      }
+    ]
+  },
+  "completion": {
+    "sha256": "bb4f3b8434401670014a120ad74dcf77cbc7ddfb340403636a86b10591205c5c",
+    "screen": "Completion",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "HOME",
+        "x": 16,
+        "y": 344,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      }
+    ]
+  },
+  "history-empty": {
+    "sha256": "3fda40094cc0713b9e49b95a586d1dd295c9076f8111bd27a9482f2263f9504b",
+    "screen": "History",
+    "controls": [
+      {
+        "id": "secondary",
+        "text": "BACK",
+        "x": 16,
+        "y": 376,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      }
+    ]
+  },
+  "history-list": {
+    "sha256": "e090e56d0d9581747d2b9c5c91c60b4037ab111259a46370f79e60a93f5ec98c",
+    "screen": "History",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "RETRY UPLOAD",
+        "x": 16,
+        "y": 344,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "secondary",
+        "text": "BACK",
+        "x": 16,
+        "y": 400,
+        "width": 336,
+        "height": 40,
+        "enabled": true
+      },
+      {
+        "id": "history-0",
+        "text": "Threshold Builder  |  30:00\nSaved  |  Uploaded",
+        "x": 16,
+        "y": 88,
+        "width": 336,
+        "height": 52,
+        "enabled": true
+      },
+      {
+        "id": "history-1",
+        "text": "Endurance Ride  |  45:00\nSaved  |  Upload will retry",
+        "x": 16,
+        "y": 148,
+        "width": 336,
+        "height": 52,
+        "enabled": true
+      },
+      {
+        "id": "history-2",
+        "text": "Short Recovery  |  20:00\nSaved  |  Upload pending",
+        "x": 16,
+        "y": 208,
+        "width": 336,
+        "height": 52,
+        "enabled": true
+      }
+    ]
+  },
+  "history-detail": {
+    "sha256": "d8d8bed1e1646f23468547374fe49f214adb21ddfd339ff82daeb2e7566e888c",
+    "screen": "History Detail",
+    "controls": [
+      {
+        "id": "secondary",
+        "text": "BACK",
+        "x": 16,
+        "y": 376,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      }
+    ]
+  },
+  "settings": {
+    "sha256": "5082288ad25debf54a305ea7a006a3cf8ca03a1064e7878b628612d501ed5e2d",
+    "screen": "Settings",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "SAVE",
+        "x": 16,
+        "y": 336,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "secondary",
+        "text": "BACK",
+        "x": 16,
+        "y": 400,
+        "width": 336,
+        "height": 40,
+        "enabled": true
+      },
+      {
+        "id": "extra-0",
+        "text": "-",
+        "x": 16,
+        "y": 286,
+        "width": 56,
+        "height": 40,
+        "enabled": true
+      },
+      {
+        "id": "extra-1",
+        "text": "+",
+        "x": 80,
+        "y": 286,
+        "width": 56,
+        "height": 40,
+        "enabled": true
+      },
+      {
+        "id": "extra-2",
+        "text": "NEXT FIELD",
+        "x": 144,
+        "y": 286,
+        "width": 120,
+        "height": 40,
+        "enabled": true
+      }
+    ]
+  },
+  "error": {
+    "sha256": "8942ef42c3c946ba47690614e40fd4c0d48bfa5e50feb66485c9354d16abdc28",
+    "screen": "Error",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "RETRY SAVE",
+        "x": 16,
+        "y": 344,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      },
+      {
+        "id": "secondary",
+        "text": "BACK",
+        "x": 16,
+        "y": 400,
+        "width": 336,
+        "height": 40,
+        "enabled": true
+      }
+    ]
+  },
+  "upload-status": {
+    "sha256": "4be1f3350a16922eedc8541406fa61ef9a6ebf16c937fb6f42fc4897bdf7a572",
+    "screen": "Upload Status",
+    "controls": [
+      {
+        "id": "secondary",
+        "text": "BACK",
+        "x": 16,
+        "y": 376,
+        "width": 336,
+        "height": 48,
+        "enabled": true
+      }
+    ]
+  },
+  "error-loading": {
+    "sha256": "71dd708abd1bdaaa130c1fae22b1121e5cfdfd9569da438afe2b530f8cd07b51",
+    "screen": "Error",
+    "controls": [
+      {
+        "id": "primary",
+        "text": "RETRY SAVE",
+        "x": 16,
+        "y": 344,
+        "width": 336,
+        "height": 48,
+        "enabled": false
+      },
+      {
+        "id": "secondary",
+        "text": "BACK",
+        "x": 16,
+        "y": 400,
+        "width": 336,
+        "height": 40,
+        "enabled": false
+      }
+    ]
+  },
+  "busy": {
+    "sha256": "1111c929b55e978568eaabd8dfd41215e9d9242f8ea9cdbb5c4b26fc5966d2d2",
+    "screen": "Home",
+    "controls": [
+      {
+        "id": "workout-card",
+        "text": "Threshold Builder",
+        "x": 16,
+        "y": 72,
+        "width": 336,
+        "height": 154,
+        "enabled": false
+      },
+      {
+        "id": "extra-0",
+        "text": "DEVICES",
+        "x": 16,
+        "y": 344,
+        "width": 104,
+        "height": 48,
+        "enabled": false
+      },
+      {
+        "id": "extra-1",
+        "text": "HISTORY",
+        "x": 132,
+        "y": 344,
+        "width": 104,
+        "height": 48,
+        "enabled": false
+      },
+      {
+        "id": "extra-2",
+        "text": "SETTINGS",
+        "x": 248,
+        "y": 344,
+        "width": 104,
+        "height": 48,
+        "enabled": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "stale BLE notifications from an old connection generation are discarded",
+  "steps": [
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000}},
+    {"command":{"op":"click","text":"DEVICES"}},
+    {"command":{"op":"click","text":"Trainer  |  Trainer Loop FTMS\nSignal -38 dBm"}},
+    {"command":{"op":"advance","ms":100}},
+    {"command":{"op":"notification","role":"trainer","kind":"bike","generation":0,"hex":"00001027"}},
+    {"command":{"op":"advance","ms":100},"expect":{"trace":{"op":"any_contains","value":"ble.stale role=0"}}},
+    {"command":{"op":"state"},"expect":{"ride_state":"Workout Preview","start_available":true}}
+  ]
+}
+

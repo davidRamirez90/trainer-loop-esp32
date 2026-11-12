@@ -1,0 +1,10 @@
+{
+  "name": "cached Intervals workouts can be selected through the production UI",
+  "steps": [
+    {"command":{"op":"http","method":"GET","path":"/api/v1/athlete/sim-athlete/events","status":200,"body":"[{\"id\":\"morning\",\"name\":\"Morning Endurance\",\"start_date_local\":\"2026-09-30T08:00:00\",\"sport\":\"Ride\"},{\"id\":\"evening\",\"name\":\"Evening Tempo\",\"start_date_local\":\"2026-09-30T18:00:00\",\"sport\":\"Ride\"}]"}},
+    {"command":{"op":"setup"}},
+    {"command":{"op":"advance","ms":1000},"expect":{"workout":"Evening Tempo"}},
+    {"command":{"op":"click","control_id":"workout-card"},"expect":{"screen":"Workout Preview","workout":"Evening Tempo"}},
+    {"command":{"op":"click","text":"NEXT"},"expect":{"screen":"Workout Preview","workout":"Morning Endurance"}}
+  ]
+}

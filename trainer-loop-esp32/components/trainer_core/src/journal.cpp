@@ -90,6 +90,28 @@ bool ensure_tree(const std::string& root) {
   return ensure_directory(root);
 }
 
+bool remove_tree(const std::string& path) {
+  struct stat status {};
+  if (::stat(path.c_str(), &status) != 0) return errno == ENOENT;
+  if (!S_ISDIR(status.st_mode)) {
+    return ::remove(path.c_str()) == 0 || errno == ENOENT;
+  }
+  DIR* handle = ::opendir(path.c_str());
+  if (handle == nullptr) return errno == ENOENT;
+  bool removed = true;
+  while (const dirent* entry = ::readdir(handle)) {
+    const std::string name(entry->d_name);
+    if (name == "." || name == "..") continue;
+    if (!remove_tree(path + "/" + name)) {
+      removed = false;
+      break;
+    }
+  }
+  const int close_result = ::closedir(handle);
+  if (!removed || close_result != 0) return false;
+  return ::rmdir(path.c_str()) == 0 || errno == ENOENT;
+}
+
 bool valid_component(const std::string& value) {
   if (value.empty() || value.size() > 96U) return false;
   for (const char character : value) {
@@ -418,6 +440,16 @@ Status SessionJournal::finalize(const JournalManifest& manifest) {
   const std::string destination = root_directory_ + "/sessions/" + current.value->uuid;
   if (::rename(current_directory().c_str(), destination.c_str()) != 0) {
     return Status::failure(ErrorCode::kStorage, "cannot publish completed session");
+  }
+  return Status::ok();
+}
+
+Status SessionJournal::discard_current() {
+  // The current directory is the one explicitly owned by the active ride.
+  // Discarding it removes the recoverable journal without touching finalized
+  // sessions, history, or upload artifacts from earlier rides.
+  if (!remove_tree(current_directory())) {
+    return Status::failure(ErrorCode::kStorage, "cannot discard current session journal");
   }
   return Status::ok();
 }

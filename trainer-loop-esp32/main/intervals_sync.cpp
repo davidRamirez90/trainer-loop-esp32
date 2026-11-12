@@ -1,7 +1,5 @@
 #include "intervals_sync.h"
 
-#ifdef ESP_PLATFORM
-
 #include "cJSON.h"
 #include "trainer_loop/workout.h"
 
@@ -169,13 +167,3 @@ Result<SyncMetadata> IntervalsSync::sync_today(const TimeService& time) {
 }
 
 }  // namespace trainer_loop
-
-#else
-
-namespace trainer_loop {
-Result<SyncMetadata> IntervalsSync::sync_today(const TimeService&) {
-  return Result<SyncMetadata>::failure(ErrorCode::kUnsupported, "Intervals sync requires ESP-IDF");
-}
-}  // namespace trainer_loop
-
-#endif

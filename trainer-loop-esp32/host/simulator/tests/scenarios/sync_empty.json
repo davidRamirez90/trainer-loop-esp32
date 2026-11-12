@@ -1,0 +1,11 @@
+{
+  "name": "an empty Intervals day clears the workout and returns to Ready",
+  "steps": [
+    {"command":{"op":"setup"},"expect":{"ride_state":"Ready"}},
+    {"command":{"op":"advance","ms":1000},"expect":{"ride_state":"Workout Preview","workout":"Local Endurance"}},
+    {"command":{"op":"http","method":"GET","path":"/api/v1/athlete/sim-athlete/events","status":200,"body":"[]"}},
+    {"command":{"op":"advance","ms":20000},"expect":{"fault":"No workout today","platform_trace":{"op":"any_contains","value":"http.response status=200"}}},
+    {"command":{"op":"restart"}},
+    {"command":{"op":"advance","ms":100},"expect":{"ride_state":"Ready","workout":"","fault":"No cached workout for today. Connect Wi-Fi and tap Retry."}}
+  ]
+}

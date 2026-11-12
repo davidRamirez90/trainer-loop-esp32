@@ -1,6 +1,8 @@
 # Native and ESP-IDF build output
 /build/
 /build-host/
+/build-simulator/
+/simulator-artifacts/
 /sdkconfig
 /sdkconfig.old
 /managed_components/
